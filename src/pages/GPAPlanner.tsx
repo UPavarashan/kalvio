@@ -204,7 +204,7 @@ export default function GPAPlanner() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-center">
           <div className="space-y-4">
-            <h2 className="font-display text-3xl font-semibold text-primary ink-underline inline-block">
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
               GPA Planner
             </h2>
             <p className="font-body text-lg text-on-surface-variant max-w-xs">

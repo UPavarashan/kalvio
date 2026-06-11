@@ -11,10 +11,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-10">
       <section>
-        <h2 className="font-headline text-3xl font-semibold text-primary ink-underline inline-block">
+        <h2 className="font-headline text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
           Good Morning
         </h2>
-        <p className="font-body text-lg text-on-surface-variant mt-4 max-w-xl">
+        <p className="font-body text-base sm:text-lg text-on-surface-variant mt-4 max-w-xl">
           One step at a time, one page at a time. Your journey is uniquely yours.
         </p>
       </section>
@@ -25,7 +25,7 @@ export default function Dashboard() {
             CURRENT GPA
           </p>
           <div className="flex items-end gap-4">
-            <span className="font-display text-6xl font-bold text-primary leading-none">
+            <span className="font-display text-5xl sm:text-6xl font-bold text-primary leading-none">
               0.00
             </span>
           </div>

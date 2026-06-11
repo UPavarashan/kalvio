@@ -6,7 +6,7 @@ export default function SkillRoadmap() {
     <UnderDevelopmentOverlay>
     <div className="space-y-8 pb-16">
       <section>
-        <h2 className="font-headline text-3xl font-semibold text-primary ink-underline inline-block">
+        <h2 className="font-headline text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
           Skill Roadmap
         </h2>
         <p className="font-body text-on-surface-variant mt-4 max-w-xl">

@@ -310,7 +310,7 @@ export default function Ledger() {
         <section
           ref={confirmRef}
           key={currentPending.session.id}
-          className="paper-texture hand-drawn-border charcoal-shadow p-8 bg-surface-container"
+          className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-8 bg-surface-container"
         >
           <p className="font-label text-[10px] text-on-surface-variant mb-1">
             {isSessionToday(currentPending.session.date)
@@ -320,7 +320,7 @@ export default function Ledger() {
           <h3 className="font-headline text-xl font-medium text-primary mb-6">
             Confirm Attendance
           </h3>
-          <div className="flex items-center gap-3 sm:gap-4 max-w-xl mx-auto">
+          <div className="flex items-center gap-2 sm:gap-4 max-w-xl mx-auto min-w-0">
             <PendingClassNavButton
               direction="prev"
               onClick={() => setPendingIndex((index) => Math.max(0, index - 1))}
@@ -332,7 +332,7 @@ export default function Ledger() {
                 {currentPending.subject.icon}
               </span>
               <div>
-                <p className="font-headline text-2xl font-medium">{currentPending.subject.name}</p>
+                <p className="font-headline text-xl sm:text-2xl font-medium">{currentPending.subject.name}</p>
                 <p className="font-body text-on-surface-variant mt-1">
                   {formatSessionDateTime(
                     currentPending.session.date,
@@ -665,9 +665,9 @@ function Header({
   onPendingClick?: () => void;
 }) {
   return (
-    <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h2 className="font-headline text-3xl font-semibold text-primary ink-underline inline-block">
+    <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 min-w-0">
+      <div className="min-w-0">
+        <h2 className="font-headline text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
           Ledger
         </h2>
         <p className="font-body text-on-surface-variant mt-2">
