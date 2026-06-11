@@ -1,24 +1,18 @@
-export const ACCESS_STORAGE_KEY = "kalvio_beta_access";
-
-/** Set in `.env` as VITE_ACCESS_CODE=your-code */
-export function getAccessCode(): string {
-  return import.meta.env.VITE_ACCESS_CODE ?? "";
-}
+export const ACCESS_STORAGE_KEY = "kalvio_access_granted";
+export const ACCESS_CODE = "KALVIO2024";
 
 export function isAccessGranted(): boolean {
   try {
-    return sessionStorage.getItem(ACCESS_STORAGE_KEY) === "1";
+    return sessionStorage.getItem(ACCESS_STORAGE_KEY) === "true";
   } catch {
     return false;
   }
 }
 
 export function grantAccess(): void {
-  sessionStorage.setItem(ACCESS_STORAGE_KEY, "1");
+  sessionStorage.setItem(ACCESS_STORAGE_KEY, "true");
 }
 
 export function verifyAccessCode(input: string): boolean {
-  const expected = getAccessCode();
-  if (!expected) return false;
-  return input.trim() === expected;
+  return input.trim() === ACCESS_CODE;
 }

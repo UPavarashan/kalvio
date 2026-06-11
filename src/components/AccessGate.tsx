@@ -1,10 +1,5 @@
 import { useState, type FormEvent } from "react";
-import {
-  getAccessCode,
-  grantAccess,
-  isAccessGranted,
-  verifyAccessCode,
-} from "../config/accessGate";
+import { grantAccess, isAccessGranted, verifyAccessCode } from "../config/accessGate";
 import { inputClass } from "../utils/formClasses";
 
 interface AccessGateProps {
@@ -16,16 +11,9 @@ export default function AccessGate({ children }: AccessGateProps) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
-  const accessConfigured = Boolean(getAccessCode());
-
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     setError("");
-
-    if (!accessConfigured) {
-      setError("Access code is not configured. Set VITE_ACCESS_CODE in .env");
-      return;
-    }
 
     if (verifyAccessCode(code)) {
       grantAccess();
@@ -33,19 +21,19 @@ export default function AccessGate({ children }: AccessGateProps) {
       return;
     }
 
-    setError("Incorrect access code. Try again.");
+    setError("Incorrect access code");
     setCode("");
   };
 
   if (unlocked) return children;
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-6">
-      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-8">
+    <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-6">
+      <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-8">
         <div className="text-center mb-6">
-          <h1 className="font-headline text-2xl font-semibold text-primary">Kalvio</h1>
+          <h1 className="font-headline text-3xl font-semibold text-primary">Kalvio</h1>
           <p className="font-body text-sm text-on-surface-variant mt-2">
-            Private beta — enter your access code to continue.
+            Enter your access code to continue.
           </p>
         </div>
 
@@ -80,9 +68,9 @@ export default function AccessGate({ children }: AccessGateProps) {
 
           <button
             type="submit"
-            className="w-full px-4 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow"
+            className="w-full px-4 py-2.5 bg-error text-on-error hand-drawn-border font-label text-xs charcoal-shadow hover:opacity-90 transition-opacity"
           >
-            Enter
+            Submit
           </button>
         </form>
       </div>
