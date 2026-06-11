@@ -32,6 +32,7 @@ import {
 } from "../utils/ledger";
 import { loadSem2Attendance, saveSem2Attendance } from "../utils/ledgerStorage";
 import { inputClass, selectClass } from "../utils/formClasses";
+import { useAuth } from "../context/AuthContext";
 
 const CURRENT_YEAR = "2023/24";
 const CURRENT_TERM = 2;
@@ -41,19 +42,12 @@ interface Term2State {
   log: AttendanceLogEntry[];
 }
 
-function initTerm2State(): Term2State {
-  const subjects = loadSem2Attendance().map(ensureSubjectSessions);
-  return {
-    ledgerSubjects: subjects,
-    log: buildLogFromSubjects(subjects),
-  };
-}
-
 function emptyTerm2State(): Term2State {
   return { ledgerSubjects: [], log: [] };
 }
 
 export default function Ledger() {
+  const { user } = useAuth();
   const { registerActions } = useLedgerUI();
   const confirmRef = useRef<HTMLElement>(null);
   const breakdownRef = useRef<HTMLDivElement>(null);
@@ -65,12 +59,24 @@ export default function Ledger() {
   const [activeTerm, setActiveTerm] = useState<1 | 2>(CURRENT_TERM);
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const [term2ByYear, setTerm2ByYear] = useState<Record<string, Term2State>>(() => ({
-    [CURRENT_YEAR]: initTerm2State(),
+    [CURRENT_YEAR]: emptyTerm2State(),
   }));
 
   useEffect(() => {
-    saveSem2Attendance(term2ByYear[CURRENT_YEAR]?.ledgerSubjects ?? []);
-  }, [term2ByYear]);
+    if (!user) return;
+    const subjects = loadSem2Attendance(user.id).map(ensureSubjectSessions);
+    setTerm2ByYear({
+      [CURRENT_YEAR]: {
+        ledgerSubjects: subjects,
+        log: buildLogFromSubjects(subjects),
+      },
+    });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    saveSem2Attendance(user.id, term2ByYear[CURRENT_YEAR]?.ledgerSubjects ?? []);
+  }, [term2ByYear, user?.id]);
 
   const [modal, setModal] = useState<
     | { type: "addSubject" }

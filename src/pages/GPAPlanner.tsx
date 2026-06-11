@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   GPA_SEMESTERS,
   GPA_BADGES,
@@ -8,6 +8,7 @@ import {
 import {
   GRADE_LABELS,
   calculateGPA,
+  DEFAULT_GRADE_POINTS,
   formatGPA,
   loadGradeScale,
   saveGradeScale,
@@ -29,6 +30,7 @@ import {
 import { ModuleFormModal } from "../components/gpa/ModuleFormModal";
 import { GradeScaleModal } from "../components/gpa/GradeScaleModal";
 import UnderDevelopmentOverlay from "../components/UnderDevelopmentOverlay";
+import { useAuth } from "../context/AuthContext";
 
 type ModuleModalState =
   | { mode: "add" }
@@ -36,13 +38,23 @@ type ModuleModalState =
   | null;
 
 export default function GPAPlanner() {
-  const [modulesBySemester, setModulesBySemester] = useState(() => loadModulesBySemester());
-  const [selectedSemesterId, setSelectedSemesterId] = useState(() => loadSelectedSemester());
+  const { user } = useAuth();
+  const [modulesBySemester, setModulesBySemester] = useState<Record<string, Module[]>>({});
+  const [selectedSemesterId, setSelectedSemesterId] = useState("2023-24-fall");
   const [targetGpa, setTargetGpa] = useState(4.0);
   const [moduleModal, setModuleModal] = useState<ModuleModalState>(null);
   const [gradeScaleOpen, setGradeScaleOpen] = useState(false);
-  const [gradePoints, setGradePoints] = useState(() => loadGradeScale());
+  const [gradePoints, setGradePoints] = useState<Record<string, number>>(() => ({
+    ...DEFAULT_GRADE_POINTS,
+  }));
   const [controlsExpanded, setControlsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setModulesBySemester(loadModulesBySemester(user.id));
+    setSelectedSemesterId(loadSelectedSemester(user.id));
+    setGradePoints(loadGradeScale(user.id));
+  }, [user?.id]);
 
   const selectedSemester =
     GPA_SEMESTERS.find((s) => s.id === selectedSemesterId) ?? GPA_SEMESTERS[GPA_SEMESTERS.length - 1];
@@ -130,6 +142,7 @@ export default function GPAPlanner() {
   }, [targetGpa, cumulativeThroughSelected, creditsThroughSelected, totalCredits]);
 
   const handleSaveModule = (module: Module) => {
+    if (!user) return;
     setModulesBySemester((prev) => {
       const current = prev[selectedSemesterId] ?? [];
       const next = {
@@ -139,27 +152,29 @@ export default function GPAPlanner() {
             ? current.map((m) => (m.id === module.id ? module : m))
             : [...current, module],
       };
-      saveModulesBySemester(next);
+      saveModulesBySemester(user.id, next);
       return next;
     });
     setModuleModal(null);
   };
 
   const handleDeleteModule = (id: string) => {
+    if (!user) return;
     setModulesBySemester((prev) => {
       const next = {
         ...prev,
         [selectedSemesterId]: (prev[selectedSemesterId] ?? []).filter((m) => m.id !== id),
       };
-      saveModulesBySemester(next);
+      saveModulesBySemester(user.id, next);
       return next;
     });
     setModuleModal(null);
   };
 
   const handleSemesterChange = (semesterId: string) => {
+    if (!user) return;
     setSelectedSemesterId(semesterId);
-    saveSelectedSemester(semesterId);
+    saveSelectedSemester(user.id, semesterId);
   };
 
   const academicYears = useMemo(() => getAcademicYears(), []);
@@ -177,8 +192,9 @@ export default function GPAPlanner() {
   };
 
   const handleSaveGradeScale = (scale: Record<string, number>) => {
+    if (!user) return;
     setGradePoints(scale);
-    saveGradeScale(scale);
+    saveGradeScale(user.id, scale);
     setGradeScaleOpen(false);
   };
 

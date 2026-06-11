@@ -1,3 +1,5 @@
+import { scopedStorageKey } from "./userStorage";
+
 export const DEFAULT_GRADE_POINTS: Record<string, number> = {
   A: 4.0,
   "A-": 3.7,
@@ -40,7 +42,7 @@ export const GRADE_LABELS: Record<string, string> = {
   F: "Fail",
 };
 
-const GRADE_SCALE_STORAGE_KEY = "univo-grade-scale";
+const GRADE_SCALE_STORAGE_SUFFIX = "grade-scale";
 
 export function getGradeOptions(gradePoints: Record<string, number>) {
   return GRADE_LETTERS.map((grade) => ({
@@ -67,9 +69,9 @@ export function formatGPA(gpa: number): string {
   return gpa.toFixed(2);
 }
 
-export function loadGradeScale(): Record<string, number> {
+export function loadGradeScale(userId: string): Record<string, number> {
   try {
-    const raw = localStorage.getItem(GRADE_SCALE_STORAGE_KEY);
+    const raw = localStorage.getItem(scopedStorageKey(userId, GRADE_SCALE_STORAGE_SUFFIX));
     if (raw) {
       const parsed = JSON.parse(raw) as Record<string, number>;
       return { ...DEFAULT_GRADE_POINTS, ...parsed };
@@ -80,8 +82,8 @@ export function loadGradeScale(): Record<string, number> {
   return { ...DEFAULT_GRADE_POINTS };
 }
 
-export function saveGradeScale(scale: Record<string, number>): void {
-  localStorage.setItem(GRADE_SCALE_STORAGE_KEY, JSON.stringify(scale));
+export function saveGradeScale(userId: string, scale: Record<string, number>): void {
+  localStorage.setItem(scopedStorageKey(userId, GRADE_SCALE_STORAGE_SUFFIX), JSON.stringify(scale));
 }
 
 export function cloneGradeScale(scale: Record<string, number>): Record<string, number> {

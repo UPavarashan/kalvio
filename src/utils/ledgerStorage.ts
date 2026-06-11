@@ -1,20 +1,21 @@
 import type { LedgerSubject } from "../types/ledger";
 import { createDefaultSem2Subjects } from "./ledger";
+import { scopedStorageKey } from "./userStorage";
 
-const SEM2_ATTENDANCE_KEY = "univo_attendance_sem2";
-const SEM2_DEFAULTS_FLAG = "univo_attendance_sem2_defaults_v1";
+const SEM2_ATTENDANCE_SUFFIX = "attendance_sem2";
+const SEM2_DEFAULTS_FLAG_SUFFIX = "attendance_sem2_defaults_v1";
 
-function seedDefaultSubjects(): LedgerSubject[] {
-  localStorage.setItem(SEM2_DEFAULTS_FLAG, "1");
+function seedDefaultSubjects(userId: string): LedgerSubject[] {
+  localStorage.setItem(scopedStorageKey(userId, SEM2_DEFAULTS_FLAG_SUFFIX), "1");
   return createDefaultSem2Subjects();
 }
 
-export function loadSem2Attendance(): LedgerSubject[] {
+export function loadSem2Attendance(userId: string): LedgerSubject[] {
   try {
-    const raw = localStorage.getItem(SEM2_ATTENDANCE_KEY);
+    const raw = localStorage.getItem(scopedStorageKey(userId, SEM2_ATTENDANCE_SUFFIX));
 
     if (raw === null) {
-      return seedDefaultSubjects();
+      return seedDefaultSubjects(userId);
     }
 
     const parsed = JSON.parse(raw);
@@ -22,8 +23,11 @@ export function loadSem2Attendance(): LedgerSubject[] {
       return [];
     }
 
-    if (parsed.length === 0 && !localStorage.getItem(SEM2_DEFAULTS_FLAG)) {
-      return seedDefaultSubjects();
+    if (
+      parsed.length === 0 &&
+      !localStorage.getItem(scopedStorageKey(userId, SEM2_DEFAULTS_FLAG_SUFFIX))
+    ) {
+      return seedDefaultSubjects(userId);
     }
 
     return parsed as LedgerSubject[];
@@ -32,6 +36,9 @@ export function loadSem2Attendance(): LedgerSubject[] {
   }
 }
 
-export function saveSem2Attendance(entries: LedgerSubject[]): void {
-  localStorage.setItem(SEM2_ATTENDANCE_KEY, JSON.stringify(entries));
+export function saveSem2Attendance(userId: string, entries: LedgerSubject[]): void {
+  localStorage.setItem(
+    scopedStorageKey(userId, SEM2_ATTENDANCE_SUFFIX),
+    JSON.stringify(entries)
+  );
 }

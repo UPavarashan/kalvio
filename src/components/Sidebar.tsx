@@ -1,7 +1,10 @@
 import { navItems } from "../config/navItems";
 import { SidebarNavLink } from "./AppNavLink";
+import { useAuth } from "../context/AuthContext";
 
 export default function Sidebar() {
+  const { user, logout } = useAuth();
+
   return (
     <aside className="hidden md:flex flex-col h-screen w-52 fixed left-0 top-0 border-r-2 border-primary bg-surface-container p-3 gap-1.5 shadow-[8px_0px_12px_-4px_rgba(51,75,70,0.15)] z-50">
       <div className="mb-6 px-1">
@@ -17,14 +20,23 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto pt-2 border-t border-outline-variant flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container border-2 border-primary overflow-hidden shrink-0">
-          <span className="material-symbols-outlined text-sm">person</span>
+      <div className="mt-auto pt-2 border-t border-outline-variant space-y-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container border-2 border-primary overflow-hidden shrink-0">
+            <span className="material-symbols-outlined text-sm">person</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-label text-[11px] text-on-surface truncate">{user?.name}</p>
+            <p className="text-[9px] text-on-surface-variant truncate">{user?.program}</p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="font-label text-[11px] text-on-surface truncate">Alex Mercer</p>
-          <p className="text-[9px] text-on-surface-variant truncate">Computer Science</p>
-        </div>
+        <button
+          type="button"
+          onClick={logout}
+          className="w-full px-3 py-1.5 border border-outline text-on-surface-variant hand-drawn-border font-label text-[10px] hover:bg-surface-variant transition-colors"
+        >
+          Sign out
+        </button>
       </div>
     </aside>
   );
