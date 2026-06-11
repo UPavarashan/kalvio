@@ -1,0 +1,40 @@
+import type { Module } from "../data/mockData";
+import { GPA_SEMESTERS } from "../data/mockData";
+
+const MODULES_STORAGE_KEY = "univo-gpa-modules";
+const SELECTED_SEMESTER_KEY = "univo-gpa-selected-semester";
+
+function emptyModulesBySemester(): Record<string, Module[]> {
+  return Object.fromEntries(GPA_SEMESTERS.map((sem) => [sem.id, []]));
+}
+
+export function loadModulesBySemester(): Record<string, Module[]> {
+  try {
+    const raw = localStorage.getItem(MODULES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, Module[]>;
+      return { ...emptyModulesBySemester(), ...parsed };
+    }
+  } catch {
+    /* use defaults */
+  }
+  return emptyModulesBySemester();
+}
+
+export function saveModulesBySemester(modulesBySemester: Record<string, Module[]>): void {
+  localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(modulesBySemester));
+}
+
+export function loadSelectedSemester(defaultId = "2023-24-fall"): string {
+  try {
+    const raw = localStorage.getItem(SELECTED_SEMESTER_KEY);
+    if (raw && GPA_SEMESTERS.some((sem) => sem.id === raw)) return raw;
+  } catch {
+    /* use default */
+  }
+  return defaultId;
+}
+
+export function saveSelectedSemester(semesterId: string): void {
+  localStorage.setItem(SELECTED_SEMESTER_KEY, semesterId);
+}

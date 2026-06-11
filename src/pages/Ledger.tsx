@@ -1,0 +1,1015 @@
+import { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
+import {
+  ACADEMIC_YEARS,
+  LEDGER_SEMESTERS,
+  type LedgerSemester,
+} from "../data/mockData";
+import type {
+  AttendanceLogEntry,
+  ClassSession,
+  LedgerSubject,
+  ScheduleSlot,
+} from "../types/ledger";
+import { formatScheduleSummary, formatTimeShort, groupSchedulesByTime } from "../types/ledger";
+import {
+  LedgerLogModal,
+  SubjectFormModal,
+} from "../components/ledger/LedgerModals";
+import { LedgerCalendarModal } from "../components/ledger/LedgerCalendarModal";
+import NotificationBell from "../components/NotificationBell";
+import { useLedgerUI } from "../context/LedgerUIContext";
+import {
+  buildLogFromSubjects,
+  computeOverallStats,
+  computeRecoveryOutlook,
+  computeSubjectStats,
+  ensureSubjectSessions,
+  formatSessionDateTime,
+  getPassPercentage,
+  getPendingSessions,
+  isSessionToday,
+  legacySubjectsToLedger,
+} from "../utils/ledger";
+import { loadSem2Attendance, saveSem2Attendance } from "../utils/ledgerStorage";
+import { inputClass, selectClass } from "../utils/formClasses";
+
+const CURRENT_YEAR = "2023/24";
+const CURRENT_TERM = 2;
+
+interface Term2State {
+  ledgerSubjects: LedgerSubject[];
+  log: AttendanceLogEntry[];
+}
+
+function initTerm2State(): Term2State {
+  const subjects = loadSem2Attendance().map(ensureSubjectSessions);
+  return {
+    ledgerSubjects: subjects,
+    log: buildLogFromSubjects(subjects),
+  };
+}
+
+function emptyTerm2State(): Term2State {
+  return { ledgerSubjects: [], log: [] };
+}
+
+export default function Ledger() {
+  const { registerActions } = useLedgerUI();
+  const confirmRef = useRef<HTMLElement>(null);
+  const breakdownRef = useRef<HTMLDivElement>(null);
+  const [breakdownHeight, setBreakdownHeight] = useState(0);
+  const [academicYear, setAcademicYear] = useState(CURRENT_YEAR);
+  const [customYears, setCustomYears] = useState<string[]>([]);
+  const [showYearInput, setShowYearInput] = useState(false);
+  const [newYearInput, setNewYearInput] = useState("");
+  const [activeTerm, setActiveTerm] = useState<1 | 2>(CURRENT_TERM);
+  const [controlsExpanded, setControlsExpanded] = useState(false);
+  const [term2ByYear, setTerm2ByYear] = useState<Record<string, Term2State>>(() => ({
+    [CURRENT_YEAR]: initTerm2State(),
+  }));
+
+  useEffect(() => {
+    saveSem2Attendance(term2ByYear[CURRENT_YEAR]?.ledgerSubjects ?? []);
+  }, [term2ByYear]);
+
+  const [modal, setModal] = useState<
+    | { type: "addSubject" }
+    | { type: "editSubject"; subjectId: string }
+    | { type: "allClasses" }
+    | { type: "log" }
+    | null
+  >(null);
+
+  const allYears = useMemo(
+    () => [...new Set([...ACADEMIC_YEARS, ...customYears])].sort(),
+    [customYears]
+  );
+  const isEditable = activeTerm === 2;
+
+  const updateTerm2 = (year: string, updater: (prev: Term2State) => Term2State) => {
+    setTerm2ByYear((prev) => ({
+      ...prev,
+      [year]: updater(prev[year] ?? emptyTerm2State()),
+    }));
+  };
+
+  const displayedData = useMemo(() => {
+    if (activeTerm === 1) {
+      const sem = LEDGER_SEMESTERS.find(
+        (s) => s.academicYear === academicYear && s.term === 1
+      );
+      if (!sem) return null;
+      const subjects = legacySubjectsToLedger(sem.subjects);
+      return {
+        academicYear: sem.academicYear,
+        term: sem.term,
+        ledgerSubjects: subjects,
+        log: buildLogFromSubjects(subjects),
+        calendarDays: sem.calendarDays,
+        calendarMonth: sem.calendarMonth,
+      };
+    }
+    const t2 = term2ByYear[academicYear] ?? emptyTerm2State();
+    return {
+      academicYear,
+      term: 2 as const,
+      ledgerSubjects: t2.ledgerSubjects,
+      log: t2.log,
+      calendarDays: [] as LedgerSemester["calendarDays"],
+      calendarMonth: "",
+    };
+  }, [activeTerm, academicYear, term2ByYear]);
+
+  const stats = useMemo(() => {
+    if (!displayedData) return null;
+    return computeOverallStats(displayedData.ledgerSubjects);
+  }, [displayedData]);
+
+  const pendingSessions = useMemo(() => {
+    if (!isEditable || activeTerm !== 2) return [];
+    const t2 = term2ByYear[academicYear];
+    if (!t2) return [];
+    return getPendingSessions(t2.ledgerSubjects);
+  }, [isEditable, activeTerm, academicYear, term2ByYear]);
+
+  const [pendingIndex, setPendingIndex] = useState(0);
+
+  useEffect(() => {
+    setPendingIndex((index) => {
+      if (pendingSessions.length === 0) return 0;
+      return Math.min(index, pendingSessions.length - 1);
+    });
+  }, [pendingSessions.length]);
+
+  const currentPending = pendingSessions[pendingIndex] ?? null;
+
+  const openAddSubject = useCallback(() => setModal({ type: "addSubject" }), []);
+  const scrollToConfirm = useCallback(() => {
+    confirmRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  useEffect(() => {
+    registerActions({
+      pendingCount: pendingSessions.length,
+      pendingItems: pendingSessions.map(({ subject, session }) => ({
+        subjectId: subject.id,
+        subjectName: subject.name,
+        icon: subject.icon,
+        date: session.date,
+        time: session.time,
+      })),
+      openAddSubject,
+      scrollToConfirm,
+    });
+    return () => registerActions(null);
+  }, [pendingSessions, openAddSubject, scrollToConfirm, registerActions]);
+
+  useLayoutEffect(() => {
+    const el = breakdownRef.current;
+    if (!el) return;
+
+    const update = () => setBreakdownHeight(el.offsetHeight);
+    update();
+
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [displayedData?.ledgerSubjects.length, controlsExpanded]);
+
+  useEffect(() => {
+    if (activeTerm !== 2) return;
+
+    updateTerm2(academicYear, (prev) => {
+      const synced = prev.ledgerSubjects.map(ensureSubjectSessions);
+      const changed = synced.some(
+        (subject, index) =>
+          subject.sessions.length !== prev.ledgerSubjects[index]?.sessions.length ||
+          subject.recurringFrom !== prev.ledgerSubjects[index]?.recurringFrom ||
+          subject.recurringUntil !== prev.ledgerSubjects[index]?.recurringUntil
+      );
+      if (!changed) return prev;
+
+      return {
+        ledgerSubjects: synced,
+        log: buildLogFromSubjects(synced),
+      };
+    });
+  }, [activeTerm, academicYear]);
+
+  const controlsSummary = `${academicYear} · Sem ${activeTerm}`;
+
+  const confirmAttendance = (
+    subjectId: string,
+    sessionId: string,
+    status: ClassSession["status"]
+  ) => {
+    if (status === "scheduled") return;
+
+    setTerm2ByYear((prev) => {
+      const current = prev[academicYear] ?? emptyTerm2State();
+      const updatedSubjects = current.ledgerSubjects.map((s) =>
+        s.id === subjectId
+          ? {
+              ...s,
+              sessions: s.sessions.map((sess) =>
+                sess.id === sessionId ? { ...sess, status } : { ...sess }
+              ),
+            }
+          : s
+      );
+      return {
+        ...prev,
+        [academicYear]: {
+          ledgerSubjects: updatedSubjects,
+          log: buildLogFromSubjects(updatedSubjects),
+        },
+      };
+    });
+  };
+
+  const controlsProps = {
+    expanded: controlsExpanded,
+    summary: controlsSummary,
+    onToggle: () => setControlsExpanded((v) => !v),
+    academicYear,
+    allYears,
+    activeTerm,
+    showYearInput,
+    newYearInput,
+    onYearChange: (y: string) => {
+      if (y === "__add__") setShowYearInput(true);
+      else {
+        setShowYearInput(false);
+        setNewYearInput("");
+        setAcademicYear(y);
+      }
+    },
+    onCancelAddYear: () => {
+      setShowYearInput(false);
+      setNewYearInput("");
+    },
+    onAddYear: () => {
+      const t = newYearInput.trim();
+      if (!t || allYears.includes(t)) return;
+      setCustomYears((p) => [...p, t]);
+      setAcademicYear(t);
+      setNewYearInput("");
+      setShowYearInput(false);
+      setActiveTerm(2);
+      setTerm2ByYear((p) => ({ ...p, [t]: p[t] ?? emptyTerm2State() }));
+    },
+    onNewYearInputChange: setNewYearInput,
+    onTermChange: setActiveTerm,
+  };
+
+  if (!displayedData || !stats) {
+    return (
+      <div className="space-y-8 pb-16">
+        <Header
+          semLabel={`${academicYear} — Sem ${activeTerm}`}
+          isEditable={false}
+          pendingItems={pendingSessions.map(({ subject, session }) => ({
+            subjectId: subject.id,
+            subjectName: subject.name,
+            icon: subject.icon,
+            date: session.date,
+            time: session.time,
+          }))}
+          onPendingClick={scrollToConfirm}
+        />
+        <p className="font-body text-on-surface-variant">No data for {academicYear} — Sem 1 yet.</p>
+        <LedgerControls {...controlsProps} />
+      </div>
+    );
+  }
+
+  const editSubject =
+    modal?.type === "editSubject"
+      ? displayedData.ledgerSubjects.find((s) => s.id === modal.subjectId)
+      : null;
+
+  return (
+    <div className="space-y-8 pb-16">
+      <Header
+        semLabel={`${displayedData.academicYear} — Sem ${displayedData.term}`}
+        isEditable={isEditable}
+        onCalendar={() => setModal({ type: "allClasses" })}
+        pendingItems={pendingSessions.map(({ subject, session }) => ({
+          subjectId: subject.id,
+          subjectName: subject.name,
+          icon: subject.icon,
+          date: session.date,
+          time: session.time,
+        }))}
+        onPendingClick={scrollToConfirm}
+      />
+
+      <LedgerControls {...controlsProps} />
+
+      {isEditable && currentPending && (
+        <section
+          ref={confirmRef}
+          key={currentPending.session.id}
+          className="paper-texture hand-drawn-border charcoal-shadow p-8 bg-surface-container"
+        >
+          <p className="font-label text-[10px] text-on-surface-variant mb-1">
+            {isSessionToday(currentPending.session.date)
+              ? "Today's class"
+              : "Unconfirmed class"}
+          </p>
+          <h3 className="font-headline text-xl font-medium text-primary mb-6">
+            Confirm Attendance
+          </h3>
+          <div className="flex items-center gap-3 sm:gap-4 max-w-xl mx-auto">
+            <PendingClassNavButton
+              direction="prev"
+              onClick={() => setPendingIndex((index) => Math.max(0, index - 1))}
+              disabled={pendingIndex === 0 || pendingSessions.length <= 1}
+              aria-label="Previous class"
+            />
+            <div className="flex-1 min-w-0 flex flex-col items-center text-center gap-6">
+              <span className="material-symbols-outlined text-5xl text-primary">
+                {currentPending.subject.icon}
+              </span>
+              <div>
+                <p className="font-headline text-2xl font-medium">{currentPending.subject.name}</p>
+                <p className="font-body text-on-surface-variant mt-1">
+                  {formatSessionDateTime(
+                    currentPending.session.date,
+                    currentPending.session.time
+                  )}
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                <ConfirmBtn
+                  label="Present"
+                  onClick={() =>
+                    confirmAttendance(
+                      currentPending.subject.id,
+                      currentPending.session.id,
+                      "present"
+                    )
+                  }
+                  variant="present"
+                />
+                <ConfirmBtn
+                  label="Absent"
+                  onClick={() =>
+                    confirmAttendance(
+                      currentPending.subject.id,
+                      currentPending.session.id,
+                      "absent"
+                    )
+                  }
+                  variant="absent"
+                />
+                <ConfirmBtn
+                  label="Excused"
+                  onClick={() =>
+                    confirmAttendance(
+                      currentPending.subject.id,
+                      currentPending.session.id,
+                      "excused"
+                    )
+                  }
+                  variant="excused"
+                  title="Medical certificate — counts as attended"
+                />
+                <ConfirmBtn
+                  label="Cancelled"
+                  onClick={() =>
+                    confirmAttendance(
+                      currentPending.subject.id,
+                      currentPending.session.id,
+                      "cancelled"
+                    )
+                  }
+                  variant="cancelled"
+                />
+              </div>
+              {pendingSessions.length > 1 && (
+                <p className="font-label text-[10px] text-on-surface-variant">
+                  Class {pendingIndex + 1} of {pendingSessions.length}
+                </p>
+              )}
+            </div>
+            <PendingClassNavButton
+              direction="next"
+              onClick={() =>
+                setPendingIndex((index) => Math.min(pendingSessions.length - 1, index + 1))
+              }
+              disabled={pendingIndex >= pendingSessions.length - 1 || pendingSessions.length <= 1}
+              aria-label="Next class"
+            />
+          </div>
+        </section>
+      )}
+
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <StatCard
+          icon="check_circle"
+          label="TOTAL SESSIONS"
+          value={String(stats.totalSessions)}
+          hint="All classes"
+        />
+        <StatCard
+          icon="schedule"
+          label="LAST 7 DAYS"
+          value={`${stats.last7DaysPct}%`}
+          hint="Recent attendance"
+        />
+        <div className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-primary-fixed flex items-center gap-3 min-w-0 overflow-hidden">
+          <div className="relative w-12 h-12 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#c2ded6" strokeWidth="2.5" />
+              <circle
+                cx="18"
+                cy="18"
+                r="15.9"
+                fill="none"
+                stroke="#334b46"
+                strokeWidth="2.5"
+                strokeDasharray={`${stats.overallAverage}, 100`}
+                strokeLinecap="round"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center font-label text-xs sm:text-sm font-bold text-primary leading-none">
+              {stats.overallAverage}%
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-snug break-words">
+              All-time attendance
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div
+          ref={breakdownRef}
+          className="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container"
+        >
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <h3 className="font-headline text-xl font-medium text-primary">
+              Subject Breakdown
+              <span className="ml-2 font-label text-[10px] text-on-surface-variant">
+                ({displayedData.ledgerSubjects.length} subjects)
+              </span>
+            </h3>
+            {isEditable && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModal({ type: "addSubject" })}
+                  className="flex items-center gap-1 px-3 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow"
+                >
+                  <span className="material-symbols-outlined text-sm">add</span>
+                  Add Subject
+                </button>
+              </div>
+            )}
+          </div>
+
+          {displayedData.ledgerSubjects.length === 0 ? (
+            <p className="font-body text-on-surface-variant">
+              No subjects yet. {isEditable && "Add a subject to schedule your classes."}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {displayedData.ledgerSubjects.map((subject) => {
+                const subStats = computeSubjectStats(subject);
+                const passPct = getPassPercentage(subject);
+                const belowPass = subStats.percentage < passPct;
+                const recovery = belowPass ? computeRecoveryOutlook(subject, subStats) : null;
+                return (
+                  <div
+                    key={subject.id}
+                    className="p-4 bg-surface-bright hand-drawn-border hover:-translate-y-1 transition-transform"
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="material-symbols-outlined text-primary shrink-0">
+                        {subject.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-label text-xs pr-1">{subject.name}</p>
+                        <SubjectScheduleCompact
+                          schedules={subject.schedules}
+                          recurringWeekly={subject.recurringWeekly}
+                        />
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 gap-1">
+                        {isEditable && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setModal({ type: "editSubject", subjectId: subject.id })
+                            }
+                            className="p-0.5 text-on-surface-variant hover:text-primary transition-colors"
+                            title="Edit subject"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                        )}
+                        <span
+                          className={`font-label text-sm font-bold tabular-nums leading-none ${
+                            belowPass ? "text-error" : "text-primary"
+                          }`}
+                        >
+                          {subStats.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-3 bg-surface hand-drawn-border overflow-hidden mb-3">
+                      <div
+                        className={`h-full sketch-bar ${belowPass ? "bg-error-container" : "bg-primary-container"}`}
+                        style={{ width: `${subStats.percentage}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-3 font-label text-[10px]">
+                      <span className="text-primary">{subStats.present} Present</span>
+                      {subStats.excused > 0 && (
+                        <span className="text-secondary">{subStats.excused} Excused</span>
+                      )}
+                      <span className="text-error">{subStats.absent} Absent</span>
+                      <span className="text-on-surface-variant">{subStats.scheduled} Scheduled</span>
+                      {subStats.cancelled > 0 && (
+                        <span className="text-on-surface-variant">{subStats.cancelled} Cancelled</span>
+                      )}
+                    </div>
+                    {recovery && (
+                      <p
+                        className={`font-label text-[9px] mt-2 leading-snug ${
+                          recovery.canRecover ? "text-primary" : "text-error"
+                        }`}
+                      >
+                        {recovery.message}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <LedgerLogPreviewCard
+          log={displayedData.log}
+          panelHeight={breakdownHeight}
+          onOpen={() => setModal({ type: "log" })}
+        />
+      </section>
+
+      {displayedData.calendarDays.length > 0 && (
+        <section className="paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container">
+          <h3 className="font-headline text-xl font-medium text-primary mb-6">
+            {displayedData.calendarMonth}
+          </h3>
+          <div className="grid grid-cols-7 gap-2">
+            {displayedData.calendarDays.map((day) => (
+              <div
+                key={day.day}
+                className={`aspect-square flex items-center justify-center font-label text-xs rounded-full ${
+                  day.status === "present"
+                    ? "bg-primary-fixed text-primary"
+                    : day.status === "absent"
+                      ? "bg-error-container text-error"
+                      : day.status === "current"
+                        ? "border-2 border-primary font-bold"
+                        : "text-on-surface-variant"
+                }`}
+              >
+                {day.day}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {modal?.type === "addSubject" && (
+        <SubjectFormModal
+          mode="add"
+          subject={{ name: "" }}
+          onClose={() => setModal(null)}
+          onSave={(subject) => {
+            updateTerm2(academicYear, (prev) => {
+              const updatedSubjects = [...prev.ledgerSubjects, subject];
+              return {
+                ledgerSubjects: updatedSubjects,
+                log: buildLogFromSubjects(updatedSubjects),
+              };
+            });
+            setModal(null);
+          }}
+        />
+      )}
+      {modal?.type === "editSubject" && editSubject && (
+        <SubjectFormModal
+          mode="edit"
+          subject={editSubject}
+          onClose={() => setModal(null)}
+          onSave={(subject) => {
+            updateTerm2(academicYear, (prev) => {
+              const updatedSubjects = prev.ledgerSubjects.map((s) =>
+                s.id === subject.id ? subject : s
+              );
+              return {
+                ledgerSubjects: updatedSubjects,
+                log: buildLogFromSubjects(updatedSubjects),
+              };
+            });
+            setModal(null);
+          }}
+          onDeleteSubject={() => {
+            updateTerm2(academicYear, (prev) => {
+              const updatedSubjects = prev.ledgerSubjects.filter((s) => s.id !== editSubject.id);
+              return {
+                ledgerSubjects: updatedSubjects,
+                log: buildLogFromSubjects(updatedSubjects),
+              };
+            });
+            setModal(null);
+          }}
+        />
+      )}
+      {modal?.type === "allClasses" && (
+        <LedgerCalendarModal
+          subjects={displayedData.ledgerSubjects}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal?.type === "log" && (
+        <LedgerLogModal log={displayedData.log} onClose={() => setModal(null)} />
+      )}
+    </div>
+  );
+}
+
+function Header({
+  semLabel,
+  isEditable,
+  onCalendar,
+  pendingItems = [],
+  onPendingClick,
+}: {
+  semLabel: string;
+  isEditable?: boolean;
+  onCalendar?: () => void;
+  pendingItems?: {
+    subjectId: string;
+    subjectName: string;
+    icon: string;
+    date: string;
+    time: string;
+  }[];
+  onPendingClick?: () => void;
+}) {
+  return (
+    <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h2 className="font-headline text-3xl font-semibold text-primary ink-underline inline-block">
+          Ledger
+        </h2>
+        <p className="font-body text-on-surface-variant mt-2">
+          {semLabel}
+          {isEditable && (
+            <span className="ml-2 font-label text-[10px] px-2 py-0.5 bg-primary-fixed text-primary rounded">
+              Active
+            </span>
+          )}
+        </p>
+      </div>
+      {(onCalendar || onPendingClick) && (
+        <div className="flex items-center gap-2 shrink-0">
+          <NotificationBell pendingItems={pendingItems} onPendingClick={onPendingClick} />
+          {onCalendar && (
+            <button
+              type="button"
+              onClick={onCalendar}
+              className="flex items-center gap-1.5 px-4 py-2 border border-primary text-primary hand-drawn-border font-label text-xs hover:bg-primary-fixed transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">calendar_month</span>
+              Calendar
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PendingClassNavButton({
+  direction,
+  onClick,
+  disabled,
+  "aria-label": ariaLabel,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+  disabled?: boolean;
+  "aria-label": string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="shrink-0 w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center hand-drawn-border bg-surface-bright text-primary transition-colors hover:bg-primary-fixed disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-surface-bright"
+    >
+      <span className="material-symbols-outlined text-2xl">
+        {direction === "prev" ? "chevron_left" : "chevron_right"}
+      </span>
+    </button>
+  );
+}
+
+function ConfirmBtn({
+  label,
+  onClick,
+  variant,
+  title,
+}: {
+  label: string;
+  onClick: () => void;
+  variant: "present" | "absent" | "excused" | "cancelled";
+  title?: string;
+}) {
+  const styles = {
+    present: "bg-primary text-on-primary",
+    absent: "border border-error text-error hover:bg-error-container",
+    excused: "bg-secondary text-on-secondary",
+    cancelled: "border border-outline text-on-surface-variant hover:bg-surface-variant",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`px-3 py-1.5 hand-drawn-border font-label text-[10px] transition-colors ${styles[variant]}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SubjectScheduleCompact({
+  schedules,
+  recurringWeekly,
+}: {
+  schedules: ScheduleSlot[];
+  recurringWeekly: boolean;
+}) {
+  if (schedules.length === 0) return null;
+
+  const groups = groupSchedulesByTime(schedules);
+  const tooltip =
+    formatScheduleSummary(schedules) + (recurringWeekly ? " · Weekly" : "");
+
+  return (
+    <p
+      className="font-label text-[9px] leading-none text-on-surface-variant/80 mt-1 truncate"
+      title={tooltip}
+    >
+      {groups.map(({ time, days }, i) => (
+        <span key={time}>
+          {i > 0 && " · "}
+          <span className="tracking-tight">{days.join("·")}</span>{" "}
+          <span className="tabular-nums">{formatTimeShort(time)}</span>
+        </span>
+      ))}
+      {recurringWeekly && <span className="text-on-surface-variant/55"> · wk</span>}
+    </p>
+  );
+}
+
+function LedgerLogPreviewCard({
+  log,
+  panelHeight,
+  onOpen,
+}: {
+  log: { id: string; date: string; subject: string; status: string }[];
+  panelHeight: number;
+  onOpen: () => void;
+}) {
+  const CARD_PADDING = 32;
+  const CARD_HEADER = 52;
+  const COL_HEADER = 18;
+  const ROW_HEIGHT = 14;
+  const FOOTER = 14;
+  const effectiveHeight = panelHeight > 0 ? panelHeight : 536;
+
+  const listBudget = effectiveHeight - CARD_PADDING - CARD_HEADER - COL_HEADER;
+  const hasMore = log.length > 0;
+  const visibleCount = Math.max(
+    4,
+    Math.floor((listBudget - (hasMore ? FOOTER : 0)) / ROW_HEIGHT)
+  );
+
+  const preview = log.slice(0, visibleCount);
+  const remaining = log.length - preview.length;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      style={{ height: effectiveHeight }}
+      className="paper-texture hand-drawn-border charcoal-shadow p-4 bg-surface-container text-left hover:bg-surface-container-high transition-colors group flex flex-col overflow-hidden w-full h-full"
+    >
+      <div className="flex justify-between items-start mb-1 shrink-0">
+        <h3 className="font-headline text-lg font-medium text-primary">Ledger Log</h3>
+        <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors text-lg">
+          open_in_full
+        </span>
+      </div>
+      <p className="font-label text-[9px] text-on-surface-variant mb-2 shrink-0">
+        Click to view all · {log.length} entries
+      </p>
+      <div className="flex-1 min-h-0 overflow-hidden pointer-events-none">
+        <div className="grid grid-cols-[52px_1fr_28px] gap-x-1.5 font-label text-[9px] text-on-surface-variant border-b border-outline-variant pb-1 mb-0.5">
+          <span>Date</span>
+          <span>Subject</span>
+          <span className="text-right">St</span>
+        </div>
+        <div className="overflow-hidden">
+          {preview.map((entry) => (
+            <div
+              key={entry.id}
+              className="grid grid-cols-[52px_1fr_28px] gap-x-1.5 font-label text-[9px] py-0.5 leading-tight items-center"
+            >
+              <span className="truncate">{entry.date}</span>
+              <span className="truncate">{entry.subject}</span>
+              <span className="text-right">
+                <LogStat status={entry.status} />
+              </span>
+            </div>
+          ))}
+        </div>
+        {remaining > 0 && (
+          <p className="font-label text-[9px] text-primary pt-1">
+            +{remaining} more
+          </p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function LogStat({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    P: "text-primary font-bold",
+    A: "text-error font-bold",
+    E: "text-secondary font-bold",
+    C: "text-on-surface-variant line-through",
+  };
+  return <span className={styles[status] ?? ""}>{status}</span>;
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-surface-container flex items-center gap-3 min-w-0 overflow-hidden">
+      <span className="material-symbols-outlined text-2xl sm:text-3xl text-primary shrink-0">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-label text-[10px] sm:text-xs text-on-surface-variant truncate">{label}</p>
+        <p className="font-display text-3xl sm:text-4xl font-bold text-primary leading-none truncate">
+          {value}
+        </p>
+        {hint && (
+          <p className="font-label text-[9px] text-on-surface-variant/70 mt-0.5 break-words leading-snug">
+            {hint}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface LedgerControlsProps {
+  expanded: boolean;
+  summary: string;
+  onToggle: () => void;
+  academicYear: string;
+  allYears: string[];
+  activeTerm: 1 | 2;
+  showYearInput: boolean;
+  newYearInput: string;
+  onYearChange: (year: string) => void;
+  onCancelAddYear: () => void;
+  onAddYear: () => void;
+  onNewYearInputChange: (value: string) => void;
+  onTermChange: (term: 1 | 2) => void;
+}
+
+function LedgerControls({
+  expanded,
+  summary,
+  onToggle,
+  academicYear,
+  allYears,
+  activeTerm,
+  showYearInput,
+  newYearInput,
+  onYearChange,
+  onCancelAddYear,
+  onAddYear,
+  onNewYearInputChange,
+  onTermChange,
+}: LedgerControlsProps) {
+  return (
+    <div className="paper-texture hand-drawn-border charcoal-shadow bg-surface-container overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-surface-container-high transition-colors text-left"
+      >
+        <span className="font-label text-[10px] text-on-surface truncate">
+          {expanded ? "Set Year" : summary}
+        </span>
+        <span className="material-symbols-outlined text-primary text-base shrink-0">
+          {expanded ? "expand_less" : "expand_more"}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3 flex flex-col sm:flex-row gap-3 sm:items-end border-t border-outline-variant pt-3">
+          <div className="flex-1">
+            <label className="font-label text-[10px] text-on-surface-variant block mb-1">
+              Academic Year
+            </label>
+            <select
+              value={showYearInput ? "__add__" : academicYear}
+              onChange={(e) => onYearChange(e.target.value)}
+              className={selectClass}
+            >
+              {allYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+              <option value="__add__">+ Add academic year...</option>
+            </select>
+            {showYearInput && (
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={newYearInput}
+                  onChange={(e) => onNewYearInputChange(e.target.value)}
+                  placeholder="e.g. 2026/27"
+                  className={`flex-1 ${inputClass}`}
+                />
+                <button
+                  type="button"
+                  onClick={onAddYear}
+                  className="px-3 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelAddYear}
+                  className="px-3 py-2 border border-outline text-on-surface-variant hand-drawn-border font-label text-xs hover:bg-surface-variant"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1">
+            <label className="font-label text-[10px] text-on-surface-variant block mb-1">
+              Semester
+            </label>
+            <div className="flex gap-2">
+              {([1, 2] as const).map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => onTermChange(term)}
+                  className={`flex-1 px-3 py-2 font-label text-xs hand-drawn-border transition-colors ${
+                    activeTerm === term
+                      ? "bg-primary text-on-primary charcoal-shadow"
+                      : "bg-surface-bright text-on-surface-variant hover:bg-surface-variant"
+                  }`}
+                >
+                  {term === 1 ? "First Sem" : "Second Sem"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

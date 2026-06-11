@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StudyNote - GPA Planner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap');
+
+        body {
+            background-image: 
+                linear-gradient(rgba(240, 238, 234, 0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(240, 238, 234, 0.5) 1px, transparent 1px);
+            background-size: 24px 24px;
+            background-color: #fbf9f5;
+        }
+
+        .paper-texture {
+            background-image: url("https://www.transparenttextures.com/patterns/linen-paper.png");
+        }
+
+        .hand-drawn-border {
+            border: 1.5px solid #334b46;
+            border-radius: 4px 8px 3px 6px / 6px 3px 8px 4px;
+        }
+
+        .charcoal-shadow {
+            box-shadow: 4px 4px 0px 0px rgba(51, 75, 70, 0.1);
+        }
+
+        .charcoal-shadow-lg {
+            box-shadow: 8px 8px 0px 0px rgba(51, 75, 70, 0.15);
+        }
+
+        .ink-underline {
+            background-image: linear-gradient(transparent 90%, #334b46 90%);
+            background-size: 100% 2px;
+            background-repeat: no-repeat;
+        }
+
+        .sketch-bar {
+            border-radius: 2px 4px 1px 3px / 8px 2px 9px 3px;
+        }
+
+        .sticker-badge {
+            transform: rotate(-2deg);
+            border: 2px dashed #334b46;
+            padding: 4px 12px;
+            display: inline-block;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#ffffff",
+                        "surface-bright": "#fbf9f5",
+                        "on-surface": "#1b1c1a",
+                        "secondary-fixed": "#d3e4fa",
+                        "inverse-primary": "#b1ccc5",
+                        "on-primary-fixed": "#06201b",
+                        "tertiary-container": "#576056",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c1c8c5",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#b7c8dd",
+                        "on-surface-variant": "#424846",
+                        "on-background": "#1b1c1a",
+                        "primary-fixed": "#cde8e1",
+                        "surface-tint": "#4a635d",
+                        "outline": "#727876",
+                        "on-secondary-fixed": "#0c1d2c",
+                        "surface-container-low": "#f5f3ef",
+                        "surface-container-highest": "#e4e2de",
+                        "tertiary-fixed": "#dce5d8",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#566678",
+                        "secondary-container": "#d3e4fa",
+                        "primary-fixed-dim": "#b1ccc5",
+                        "on-tertiary-fixed-variant": "#41493f",
+                        "error": "#ba1a1a",
+                        "tertiary": "#40483f",
+                        "inverse-on-surface": "#f2f0ec",
+                        "on-tertiary-fixed": "#161d16",
+                        "on-secondary-fixed-variant": "#384859",
+                        "primary-container": "#4a635d",
+                        "on-tertiary-container": "#d1dacd",
+                        "secondary": "#506072",
+                        "surface": "#fbf9f5",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#334b46",
+                        "surface-container-high": "#eae8e4",
+                        "inverse-surface": "#30312e",
+                        "surface-variant": "#e4e2de",
+                        "surface-container": "#f0eeea",
+                        "on-primary-container": "#c2ded6",
+                        "primary": "#334b46",
+                        "surface-dim": "#dbdad6",
+                        "background": "#fbf9f5",
+                        "tertiary-fixed-dim": "#c0c9bd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "base": "4px",
+                        "margin": "32px",
+                        "xl": "64px",
+                        "gutter": "24px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "lg": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Bricolage Grotesque"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg": ["Bricolage Grotesque"],
+                        "label-sm": ["JetBrains Mono"],
+                        "display": ["Bricolage Grotesque"],
+                        "body-lg": ["Be Vietnam Pro"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-fixed selection:text-primary">
+<!-- Sidebar Navigation -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 border-r-2 border-primary bg-surface-container dark:bg-surface-container-lowest p-sm gap-xs shadow-[8px_0px_12px_-4px_rgba(51,75,70,0.15)] z-50">
+<div class="mb-lg px-xs">
+<h1 class="font-headline-md text-headline-md text-on-surface">My Notebook</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Semester 5</p>
+</div>
+<nav class="flex flex-col gap-xs flex-grow">
+<a class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="event_available">event_available</span>
+<span class="font-label-sm">Attendance</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-primary font-bold bg-primary-fixed rounded-lg border border-primary transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="grade">grade</span>
+<span class="font-label-sm">GPA</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-sm">Past Papers</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-sm">Skill Roadmap</span>
+</a>
+</nav>
+<div class="mt-auto p-xs border-t border-outline-variant flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container overflow-hidden border-2 border-primary">
+<img alt="Student Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgv5zOda7nnUCX-EeKNmqdmDc12y06DXroSx8CdzPQG3wDjOKi5m5tm31F16lvdL1ci6DfjSGd3OXUoZgai5zwLcdlF4EV7dxAhkbKs7Htx3Nru0nso-L3oRafXjEFXK1oO7a31ZVEeSg-8SzgiAkTykSAiybDJXneAhnXbc37IMTDOh8UeKuOz_IzB6ttojuvVGkUgdhykqG9Ct1gQjfnSKMxeHjX9DSpdlQQ_VPgHjzXbHOhDowDfyu7xJFVrBIQ2ykWmAsSEF4"/>
+</div>
+<div>
+<p class="font-label-sm text-on-surface">Alex Mercer</p>
+<p class="text-[10px] text-on-surface-variant">Computer Science</p>
+</div>
+</div>
+</aside>
+<!-- Top AppBar -->
+<header class="md:ml-64 bg-surface-bright border-b border-outline dark:border-outline-variant shadow-[4px_4px_0px_0px_rgba(51,75,70,0.1)] sticky top-0 z-40">
+<div class="flex justify-between items-center w-full px-margin py-xs max-w-full">
+<div class="flex items-center gap-md">
+<span class="font-headline-md text-headline-md text-primary">StudyNote</span>
+<div class="hidden sm:flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 font-body-md text-body-md w-64" placeholder="Search notes or grades..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<button class="relative p-xs hover:bg-surface-container-high transition-colors duration-200 rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="md:hidden w-8 h-8 rounded-full border-2 border-primary bg-primary-fixed overflow-hidden">
+<img alt="Student Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhHlD6rr0fbRnsaZrmoffRtOJEP4Yd9OEnzZ7ODW2johkkB2mnCl4m2SEN1YU8uQ9BMfXDm7qk8GXQTvj951eg6GpbWbJOmdyTNPSNiltsVC0HRPv9UfXw1aDQQQ15GyWk6RQtbJtU7585CnylVQ0yrAIsyfjJc1X0dKx4xSTQQ3CQCkY-9tY9wvDqTAkCL2GChw1grUCsCV5mK4glX3ESmz4TWq4mN6KCUJMs6-VLlNkOpkd3dc9eFkMbnMzLx8fuq1BmAfvFMW8"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="md:ml-64 p-margin max-w-7xl mx-auto space-y-lg">
+<!-- Cumulative Overview Section -->
+<section class="paper-texture hand-drawn-border charcoal-shadow-lg p-lg bg-surface-container relative overflow-hidden">
+<div class="absolute -top-4 -right-4 opacity-10">
+<span class="material-symbols-outlined text-[120px]" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg items-center">
+<div class="space-y-sm">
+<h2 class="font-display text-headline-lg text-primary ink-underline inline-block">GPA Planner</h2>
+<p class="font-body-lg text-on-surface-variant max-w-xs">Simulate your semester outcomes and track your path to graduation.</p>
+<div class="flex gap-sm pt-md">
+<div class="sticker-badge bg-primary-fixed text-primary font-label-sm">
+                            Dean's List Expected
+                        </div>
+<div class="sticker-badge bg-tertiary-fixed text-tertiary font-label-sm rotate-2">
+                            Top 5% Rank
+                        </div>
+</div>
+</div>
+<div class="flex flex-col items-center justify-center p-md bg-surface-bright hand-drawn-border rotate-1">
+<p class="font-label-sm text-on-surface-variant mb-xs">CUMULATIVE GPA</p>
+<span class="font-display text-[64px] text-primary leading-none">3.88</span>
+<div class="flex items-center gap-xs text-primary font-bold mt-sm">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+<span class="text-xs">+0.12 vs last sem</span>
+</div>
+</div>
+<div class="space-y-md">
+<div class="space-y-xs">
+<div class="flex justify-between font-label-sm">
+<span>Credits Earned</span>
+<span>92 / 120</span>
+</div>
+<div class="h-4 bg-surface hand-drawn-border overflow-hidden">
+<div class="h-full bg-primary-container sketch-bar" style="width: 76%;"></div>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex-1 bg-primary text-surface-bright hand-drawn-border py-xs font-label-sm charcoal-shadow hover:translate-y-0.5 transition-transform">
+                            Save Projection
+                        </button>
+<button class="flex-1 border-1.5 border-primary text-primary hand-drawn-border py-xs font-label-sm hover:bg-primary-fixed transition-colors">
+                            Export PDF
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- GPA Trend Chart -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<div class="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-md bg-surface-container">
+<div class="flex justify-between items-center mb-lg">
+<h3 class="font-headline-md text-primary">GPA Trend</h3>
+<div class="flex gap-xs">
+<span class="w-3 h-3 bg-primary-container rounded-full"></span>
+<span class="font-label-sm text-on-surface-variant">GPA per Semester</span>
+</div>
+</div>
+<div class="h-64 flex items-end justify-around gap-md px-md border-b-2 border-primary border-l-2">
+<!-- Semester 1 -->
+<div class="group relative flex flex-col items-center w-full max-w-[60px]">
+<div class="w-full bg-primary-fixed-dim sketch-bar hover:bg-primary-container transition-colors relative" style="height: 160px;">
+<span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm opacity-0 group-hover:opacity-100 transition-opacity">3.2</span>
+</div>
+<p class="font-label-sm mt-xs">Sem 1</p>
+</div>
+<!-- Semester 2 -->
+<div class="group relative flex flex-col items-center w-full max-w-[60px]">
+<div class="w-full bg-primary-fixed-dim sketch-bar hover:bg-primary-container transition-colors relative" style="height: 175px;">
+<span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm opacity-0 group-hover:opacity-100 transition-opacity">3.5</span>
+</div>
+<p class="font-label-sm mt-xs">Sem 2</p>
+</div>
+<!-- Semester 3 -->
+<div class="group relative flex flex-col items-center w-full max-w-[60px]">
+<div class="w-full bg-primary-fixed-dim sketch-bar hover:bg-primary-container transition-colors relative" style="height: 190px;">
+<span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm opacity-0 group-hover:opacity-100 transition-opacity">3.8</span>
+</div>
+<p class="font-label-sm mt-xs">Sem 3</p>
+</div>
+<!-- Semester 4 -->
+<div class="group relative flex flex-col items-center w-full max-w-[60px]">
+<div class="w-full bg-primary-fixed-dim sketch-bar hover:bg-primary-container transition-colors relative" style="height: 185px;">
+<span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm opacity-0 group-hover:opacity-100 transition-opacity">3.7</span>
+</div>
+<p class="font-label-sm mt-xs">Sem 4</p>
+</div>
+<!-- Semester 5 (Active/Projected) -->
+<div class="group relative flex flex-col items-center w-full max-w-[60px]">
+<div class="w-full bg-primary sketch-bar relative" style="height: 200px;">
+<div class="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,rgba(255,255,255,0.1)_5px,rgba(255,255,255,0.1)_10px)]"></div>
+<span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm">4.0</span>
+</div>
+<p class="font-label-sm mt-xs font-bold text-primary">Sem 5*</p>
+</div>
+</div>
+</div>
+<div class="paper-texture hand-drawn-border charcoal-shadow p-md bg-surface-container flex flex-col">
+<h3 class="font-headline-md text-primary mb-md">Scholarship Tracker</h3>
+<div class="space-y-md flex-grow">
+<div class="p-sm bg-surface-bright hand-drawn-border relative">
+<div class="absolute top-2 right-2 sticker-badge bg-tertiary text-on-tertiary scale-75 rotate-6">ELlGIBLE</div>
+<p class="font-label-sm text-on-surface-variant">Global Excellence Award</p>
+<p class="font-headline-md text-primary">$4,500 / yr</p>
+<p class="text-[10px] mt-xs text-on-surface-variant">Min GPA: 3.85 Required</p>
+</div>
+<div class="p-sm bg-surface-bright hand-drawn-border opacity-60">
+<p class="font-label-sm text-on-surface-variant">Innovation Grant</p>
+<p class="font-headline-md text-on-surface-variant">$2,000 / yr</p>
+<p class="text-[10px] mt-xs text-error font-bold">Requires Projects Submission</p>
+</div>
+</div>
+<button class="mt-md w-full p-xs font-label-sm text-primary underline decoration-2 hover:text-primary-container transition-colors">
+                    View Requirements List
+                </button>
+</div>
+</section>
+<!-- Current Semester Modules -->
+<section class="space-y-md">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="font-headline-md text-primary">Semester 5 Modules</h3>
+<p class="font-body-md text-on-surface-variant">Update your expected grades to recalculate GPA</p>
+</div>
+<button class="flex items-center gap-xs px-sm py-xs bg-surface-container hand-drawn-border charcoal-shadow font-label-sm hover:bg-surface-variant">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    Add Module
+                </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md">
+<!-- Module 1 -->
+<div class="paper-texture hand-drawn-border p-md bg-surface-bright charcoal-shadow hover:-translate-y-1 transition-transform group">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-xs bg-primary-fixed rounded-lg border border-primary/20">
+<span class="material-symbols-outlined text-primary" data-icon="terminal">terminal</span>
+</div>
+<span class="font-label-sm text-on-surface-variant">4 Credits</span>
+</div>
+<h4 class="font-headline-md text-on-surface mb-md h-12 overflow-hidden">Operating Systems</h4>
+<div class="space-y-sm">
+<label class="font-label-sm block text-on-surface-variant">Expected Grade</label>
+<div class="flex items-center gap-md">
+<input class="w-12 h-12 text-center font-display text-headline-md text-primary bg-surface-container-low border-2 border-primary sketch-bar focus:ring-0 focus:bg-primary-fixed transition-all" maxlength="2" type="text" value="A"/>
+<div class="flex flex-col">
+<span class="font-label-sm text-primary">4.0 Pts</span>
+<span class="text-[10px] text-on-surface-variant">Excellent</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Module 2 -->
+<div class="paper-texture hand-drawn-border p-md bg-surface-bright charcoal-shadow hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-xs bg-secondary-container rounded-lg border border-secondary/20">
+<span class="material-symbols-outlined text-secondary" data-icon="database">database</span>
+</div>
+<span class="font-label-sm text-on-surface-variant">3 Credits</span>
+</div>
+<h4 class="font-headline-md text-on-surface mb-md h-12 overflow-hidden">Database Systems</h4>
+<div class="space-y-sm">
+<label class="font-label-sm block text-on-surface-variant">Expected Grade</label>
+<div class="flex items-center gap-md">
+<input class="w-12 h-12 text-center font-display text-headline-md text-primary bg-surface-container-low border-2 border-primary sketch-bar focus:ring-0 focus:bg-primary-fixed transition-all" maxlength="2" type="text" value="A-"/>
+<div class="flex flex-col">
+<span class="font-label-sm text-primary">3.7 Pts</span>
+<span class="text-[10px] text-on-surface-variant">Very Good</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Module 3 -->
+<div class="paper-texture hand-drawn-border p-md bg-surface-bright charcoal-shadow hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-xs bg-tertiary-container text-on-tertiary-container rounded-lg border border-tertiary/20">
+<span class="material-symbols-outlined" data-icon="functions">functions</span>
+</div>
+<span class="font-label-sm text-on-surface-variant">3 Credits</span>
+</div>
+<h4 class="font-headline-md text-on-surface mb-md h-12 overflow-hidden">Discrete Maths II</h4>
+<div class="space-y-sm">
+<label class="font-label-sm block text-on-surface-variant">Expected Grade</label>
+<div class="flex items-center gap-md">
+<input class="w-12 h-12 text-center font-display text-headline-md text-primary bg-surface-container-low border-2 border-primary sketch-bar focus:ring-0 focus:bg-primary-fixed transition-all" maxlength="2" type="text" value="B+"/>
+<div class="flex flex-col">
+<span class="font-label-sm text-primary">3.3 Pts</span>
+<span class="text-[10px] text-on-surface-variant">Good</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Module 4 -->
+<div class="paper-texture hand-drawn-border p-md bg-surface-bright charcoal-shadow hover:-translate-y-1 transition-transform">
+<div class="flex justify-between items-start mb-sm">
+<div class="p-xs bg-error-container text-on-error-container rounded-lg border border-error/20">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+</div>
+<span class="font-label-sm text-on-surface-variant">2 Credits</span>
+</div>
+<h4 class="font-headline-md text-on-surface mb-md h-12 overflow-hidden">Ethics in AI</h4>
+<div class="space-y-sm">
+<label class="font-label-sm block text-on-surface-variant">Expected Grade</label>
+<div class="flex items-center gap-md">
+<input class="w-12 h-12 text-center font-display text-headline-md text-primary bg-surface-container-low border-2 border-primary sketch-bar focus:ring-0 focus:bg-primary-fixed transition-all" maxlength="2" type="text" value="A"/>
+<div class="flex flex-col">
+<span class="font-label-sm text-primary">4.0 Pts</span>
+<span class="text-[10px] text-on-surface-variant">Excellent</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Planning Tools Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-lg pb-xl">
+<div class="p-lg bg-surface-container-high hand-drawn-border charcoal-shadow space-y-md">
+<h3 class="font-headline-md text-primary">Target GPA Calculator</h3>
+<p class="font-body-md text-on-surface-variant">I want to graduate with a CGPA of:</p>
+<div class="flex items-end gap-md">
+<input class="w-32 bg-transparent border-b-2 border-primary font-display text-[48px] text-primary focus:ring-0" step="0.01" type="number" value="3.90"/>
+<div class="pb-base">
+<p class="font-label-sm text-primary">Required Semester Average:</p>
+<p class="font-headline-md">3.94</p>
+</div>
+</div>
+<div class="p-sm bg-primary-fixed rounded-lg font-label-sm text-primary border border-primary">
+<span class="material-symbols-outlined align-middle mr-xs" data-icon="info">info</span>
+                    This target is achievable with current module selections.
+                </div>
+</div>
+<div class="p-lg bg-surface-container-high hand-drawn-border charcoal-shadow space-y-md">
+<h3 class="font-headline-md text-primary">Historical Performance</h3>
+<div class="space-y-sm">
+<div class="flex justify-between items-center font-label-sm p-xs hover:bg-surface-variant transition-colors rounded">
+<span>Semester 4 (Spring 2023)</span>
+<span class="font-bold">3.75 GPA</span>
+</div>
+<div class="flex justify-between items-center font-label-sm p-xs hover:bg-surface-variant transition-colors rounded">
+<span>Semester 3 (Fall 2022)</span>
+<span class="font-bold">3.82 GPA</span>
+</div>
+<div class="flex justify-between items-center font-label-sm p-xs hover:bg-surface-variant transition-colors rounded">
+<span>Semester 2 (Spring 2022)</span>
+<span class="font-bold">3.50 GPA</span>
+</div>
+<div class="flex justify-between items-center font-label-sm p-xs hover:bg-surface-variant transition-colors rounded">
+<span>Semester 1 (Fall 2021)</span>
+<span class="font-bold">3.20 GPA</span>
+</div>
+</div>
+<button class="w-full text-center font-label-sm text-primary-container font-bold hover:underline">
+                    View Full Transcript
+                </button>
+</div>
+</section>
+</main>
+<!-- Floating Action Button - Only for contextually relevant pages -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-surface-bright rounded-full charcoal-shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+<script>
+        // Micro-interaction for grade inputs
+        document.querySelectorAll('input[type="text"]').forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('scale-105');
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.classList.remove('scale-105');
+            });
+            input.addEventListener('input', (e) => {
+                // Limit to 2 characters and auto-capitalize
+                e.target.value = e.target.value.toUpperCase();
+            });
+        });
+
+        // Simple parallax effect for paper texture on scroll
+        window.addEventListener('scroll', () => {
+            const scroll = window.pageYOffset;
+            document.body.style.backgroundPosition = `0px ${scroll * 0.1}px`;
+        });
+    </script>
+</body></html>
