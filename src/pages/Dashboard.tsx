@@ -9,7 +9,7 @@ export default function Dashboard() {
   const maxGpa = 4.0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8 sm:space-y-10">
       <section>
         <h2 className="font-headline text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
           Good Morning

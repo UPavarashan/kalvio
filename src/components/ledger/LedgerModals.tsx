@@ -93,7 +93,7 @@ export function SubjectFormModal({
 
   return (
     <ModalOverlay onClose={isDirty ? undefined : onClose}>
-      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-headline text-xl font-medium text-primary">
             {mode === "add" ? "Add Subject" : "Edit Subject"}
@@ -347,20 +347,25 @@ export function LedgerLogModal({ log, onClose }: LedgerLogModalProps) {
   return (
     <ModalOverlay onClose={onClose}>
       <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex justify-between items-center p-6 pb-4 shrink-0">
-          <div>
-            <h3 className="font-headline text-xl font-medium text-primary">Full Ledger Log</h3>
-            <p className="font-body text-sm text-on-surface-variant mt-1">
+        <div className="flex justify-between items-start gap-3 p-4 sm:p-6 pb-4 shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-headline text-lg sm:text-xl font-medium text-primary">Full Attendance Log</h3>
+            <p className="font-body text-xs sm:text-sm text-on-surface-variant mt-1">
               Every past class recorded
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-1 hover:bg-surface-variant rounded">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close log"
+            className="p-2 hover:bg-surface-variant rounded shrink-0 min-w-[2.5rem] min-h-[2.5rem] flex items-center justify-center"
+          >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         {log.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 pb-3 shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-4 sm:px-6 pb-3 shrink-0">
             <input
               type="date"
               value={dateFilter}
@@ -455,7 +460,7 @@ function ModalOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-inverse-surface/40"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-inverse-surface/40"
       onClick={onClose}
     >
       <div onClick={(e) => e.stopPropagation()}>{children}</div>

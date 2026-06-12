@@ -1,42 +1,24 @@
 import { NavLink } from "react-router-dom";
 import type { NavItem } from "../config/navItems";
 
-function sidebarLinkClass(isActive: boolean): string {
-  return `flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all font-label text-[11px] tracking-wide ${
+function topNavLinkClass(isActive: boolean): string {
+  return `flex items-center justify-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg transition-all font-label text-[10px] sm:text-[11px] tracking-wide whitespace-nowrap shrink-0 min-w-[2.75rem] min-h-[2.75rem] sm:min-w-0 sm:min-h-0 ${
     isActive
-      ? "text-primary font-bold bg-primary-fixed border border-primary"
-      : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant"
+      ? "text-primary bg-primary-fixed/80 font-bold"
+      : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60"
   }`;
 }
 
-function bottomLinkClass(isActive: boolean): string {
-  return `flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 px-1 py-1.5 rounded-lg transition-all font-label text-[9px] tracking-wide ${
-    isActive
-      ? "text-primary font-bold bg-primary-fixed border border-primary"
-      : "text-on-surface-variant"
-  }`;
-}
-
-export function SidebarNavLink({ item }: { item: NavItem }) {
-  return (
-    <NavLink to={item.to} end={item.to === "/"} className={({ isActive }) => sidebarLinkClass(isActive)}>
-      <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-      {item.label}
-    </NavLink>
-  );
-}
-
-export function BottomNavLink({ item }: { item: NavItem }) {
+export function TopNavLink({ item }: { item: NavItem }) {
   return (
     <NavLink
       to={item.to}
       end={item.to === "/"}
-      className={({ isActive }) => bottomLinkClass(isActive)}
+      title={item.label}
+      className={({ isActive }) => topNavLinkClass(isActive)}
     >
-      <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
-      <span className="truncate max-w-full leading-tight text-center">
-        {item.shortLabel ?? item.label}
-      </span>
+      <span className="material-symbols-outlined text-[20px] sm:text-[18px]">{item.icon}</span>
+      <span className="hidden sm:inline">{item.shortLabel ?? item.label}</span>
     </NavLink>
   );
 }

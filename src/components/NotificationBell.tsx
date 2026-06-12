@@ -41,7 +41,7 @@ export default function NotificationBell({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-2rem))] paper-texture hand-drawn-border charcoal-shadow bg-surface-container p-3 z-50">
+        <div className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-1.5rem))] paper-texture hand-drawn-border charcoal-shadow bg-surface-container p-3 z-50">
           <p className="font-label text-[10px] text-on-surface-variant mb-2">
             Needs confirmation
           </p>

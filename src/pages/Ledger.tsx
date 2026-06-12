@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import {
   ACADEMIC_YEARS,
   LEDGER_SEMESTERS,
@@ -50,8 +50,6 @@ export default function Ledger() {
   const { user } = useAuth();
   const { registerActions } = useLedgerUI();
   const confirmRef = useRef<HTMLElement>(null);
-  const breakdownRef = useRef<HTMLDivElement>(null);
-  const [breakdownHeight, setBreakdownHeight] = useState(0);
   const [academicYear, setAcademicYear] = useState(CURRENT_YEAR);
   const [customYears, setCustomYears] = useState<string[]>([]);
   const [showYearInput, setShowYearInput] = useState(false);
@@ -170,18 +168,6 @@ export default function Ledger() {
     return () => registerActions(null);
   }, [pendingSessions, openAddSubject, scrollToConfirm, registerActions]);
 
-  useLayoutEffect(() => {
-    const el = breakdownRef.current;
-    if (!el) return;
-
-    const update = () => setBreakdownHeight(el.offsetHeight);
-    update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [displayedData?.ledgerSubjects.length, controlsExpanded]);
-
   useEffect(() => {
     if (activeTerm !== 2) return;
 
@@ -270,10 +256,9 @@ export default function Ledger() {
 
   if (!displayedData || !stats) {
     return (
-      <div className="space-y-8 pb-16">
+      <div className="flex flex-col gap-5 sm:gap-8 pb-8 sm:pb-16 w-full">
         <Header
           semLabel={`${academicYear} — Sem ${activeTerm}`}
-          isEditable={false}
           pendingItems={pendingSessions.map(({ subject, session }) => ({
             subjectId: subject.id,
             subjectName: subject.name,
@@ -282,9 +267,9 @@ export default function Ledger() {
             time: session.time,
           }))}
           onPendingClick={scrollToConfirm}
+          controls={<LedgerControls {...controlsProps} />}
         />
         <p className="font-body text-on-surface-variant">No data for {academicYear} — Sem 1 yet.</p>
-        <LedgerControls {...controlsProps} />
       </div>
     );
   }
@@ -295,10 +280,9 @@ export default function Ledger() {
       : null;
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="flex flex-col gap-5 sm:gap-8 pb-8 sm:pb-16 w-full">
       <Header
         semLabel={`${displayedData.academicYear} — Sem ${displayedData.term}`}
-        isEditable={isEditable}
         onCalendar={() => setModal({ type: "allClasses" })}
         pendingItems={pendingSessions.map(({ subject, session }) => ({
           subjectId: subject.id,
@@ -308,15 +292,14 @@ export default function Ledger() {
           time: session.time,
         }))}
         onPendingClick={scrollToConfirm}
+        controls={<LedgerControls {...controlsProps} />}
       />
-
-      <LedgerControls {...controlsProps} />
 
       {isEditable && currentPending && (
         <section
           ref={confirmRef}
           key={currentPending.session.id}
-          className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-8 bg-surface-container"
+          className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-8 bg-surface-container w-full max-w-full"
         >
           <p className="font-label text-[10px] text-on-surface-variant mb-1">
             {isSessionToday(currentPending.session.date)
@@ -346,7 +329,7 @@ export default function Ledger() {
                   )}
                 </p>
               </div>
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="grid grid-cols-2 gap-2 w-full max-w-sm sm:flex sm:flex-wrap sm:justify-center sm:max-w-none">
                 <ConfirmBtn
                   label="Present"
                   onClick={() =>
@@ -411,7 +394,7 @@ export default function Ledger() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <section className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-center sm:gap-4 w-full">
         <StatCard
           icon="check_circle"
           label="TOTAL SESSIONS"
@@ -424,7 +407,7 @@ export default function Ledger() {
           value={`${stats.last7DaysPct}%`}
           hint="Recent attendance"
         />
-        <div className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-primary-fixed flex items-center gap-3 min-w-0 overflow-hidden">
+        <div className="col-span-2 sm:col-span-1 paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-5 bg-primary-fixed flex items-center justify-center sm:justify-start gap-3 w-full sm:w-fit max-w-full">
           <div className="relative w-12 h-12 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="#c2ded6" strokeWidth="2.5" />
@@ -443,19 +426,16 @@ export default function Ledger() {
               {stats.overallAverage}%
             </span>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-snug break-words">
+          <div>
+            <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-snug whitespace-nowrap">
               All-time attendance
             </p>
           </div>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-        <div
-          ref={breakdownRef}
-          className="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container"
-        >
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full items-stretch">
+        <div className="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-surface-container w-full min-w-0">
           <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
             <h3 className="font-headline text-xl font-medium text-primary">
               Subject Breakdown
@@ -561,13 +541,12 @@ export default function Ledger() {
 
         <LedgerLogPreviewCard
           log={displayedData.log}
-          panelHeight={breakdownHeight}
           onOpen={() => setModal({ type: "log" })}
         />
       </section>
 
       {displayedData.calendarDays.length > 0 && (
-        <section className="paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container">
+        <section className="paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container w-full">
           <h3 className="font-headline text-xl font-medium text-primary mb-6">
             {displayedData.calendarMonth}
           </h3>
@@ -653,13 +632,12 @@ export default function Ledger() {
 
 function Header({
   semLabel,
-  isEditable,
   onCalendar,
   pendingItems = [],
   onPendingClick,
+  controls,
 }: {
   semLabel: string;
-  isEditable?: boolean;
   onCalendar?: () => void;
   pendingItems?: {
     subjectId: string;
@@ -669,37 +647,39 @@ function Header({
     time: string;
   }[];
   onPendingClick?: () => void;
+  controls?: ReactNode;
 }) {
+  const showActions = controls || onCalendar || onPendingClick;
+
   return (
-    <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 min-w-0">
-      <div className="min-w-0">
-        <h2 className="font-headline text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
-          Ledger
+    <section className="relative z-20 flex flex-col gap-1 sm:gap-2 w-full min-w-0">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
+        <h2 className="font-headline text-xl sm:text-3xl font-semibold text-primary ink-underline shrink-0">
+          Attendance
         </h2>
-        <p className="font-body text-on-surface-variant mt-2">
-          {semLabel}
-          {isEditable && (
-            <span className="ml-2 font-label text-[10px] px-2 py-0.5 bg-primary-fixed text-primary rounded">
-              Active
-            </span>
-          )}
-        </p>
+        {showActions && (
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {onPendingClick && (
+              <NotificationBell pendingItems={pendingItems} onPendingClick={onPendingClick} />
+            )}
+            {controls}
+            {onCalendar && (
+              <button
+                type="button"
+                onClick={onCalendar}
+                aria-label="Open calendar"
+                className="flex items-center justify-center gap-1.5 min-w-[2.75rem] min-h-[2.75rem] sm:min-w-0 sm:min-h-0 px-2.5 sm:px-4 py-2 border border-primary text-primary hand-drawn-border font-label text-xs hover:bg-primary-fixed transition-colors shrink-0"
+              >
+                <span className="material-symbols-outlined text-sm">calendar_month</span>
+                <span className="hidden sm:inline">Calendar</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      {(onCalendar || onPendingClick) && (
-        <div className="flex items-center gap-2 shrink-0">
-          <NotificationBell pendingItems={pendingItems} onPendingClick={onPendingClick} />
-          {onCalendar && (
-            <button
-              type="button"
-              onClick={onCalendar}
-              className="flex items-center gap-1.5 px-4 py-2 border border-primary text-primary hand-drawn-border font-label text-xs hover:bg-primary-fixed transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">calendar_month</span>
-              Calendar
-            </button>
-          )}
-        </div>
-      )}
+      <p className="font-body text-sm sm:text-base text-on-surface-variant">
+        {semLabel}
+      </p>
     </section>
   );
 }
@@ -752,7 +732,7 @@ function ConfirmBtn({
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-3 py-1.5 hand-drawn-border font-label text-[10px] transition-colors ${styles[variant]}`}
+      className={`w-full sm:w-auto px-3 py-2 sm:py-1.5 hand-drawn-border font-label text-[10px] transition-colors ${styles[variant]}`}
     >
       {label}
     </button>
@@ -791,39 +771,22 @@ function SubjectScheduleCompact({
 
 function LedgerLogPreviewCard({
   log,
-  panelHeight,
   onOpen,
 }: {
   log: { id: string; date: string; subject: string; status: string }[];
-  panelHeight: number;
   onOpen: () => void;
 }) {
-  const CARD_PADDING = 32;
-  const CARD_HEADER = 52;
-  const COL_HEADER = 18;
-  const ROW_HEIGHT = 14;
-  const FOOTER = 14;
-  const effectiveHeight = panelHeight > 0 ? panelHeight : 536;
-
-  const listBudget = effectiveHeight - CARD_PADDING - CARD_HEADER - COL_HEADER;
-  const hasMore = log.length > 0;
-  const visibleCount = Math.max(
-    4,
-    Math.floor((listBudget - (hasMore ? FOOTER : 0)) / ROW_HEIGHT)
-  );
-
-  const preview = log.slice(0, visibleCount);
+  const preview = log.slice(0, 6);
   const remaining = log.length - preview.length;
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      style={{ height: effectiveHeight }}
-      className="paper-texture hand-drawn-border charcoal-shadow p-4 bg-surface-container text-left hover:bg-surface-container-high transition-colors group flex flex-col overflow-hidden w-full h-full"
+      className="paper-texture hand-drawn-border charcoal-shadow p-4 bg-surface-container text-left hover:bg-surface-container-high transition-colors group flex flex-col overflow-hidden w-full min-h-full"
     >
       <div className="flex justify-between items-start mb-1 shrink-0">
-        <h3 className="font-headline text-lg font-medium text-primary">Ledger Log</h3>
+        <h3 className="font-headline text-lg font-medium text-primary">Attendance Log</h3>
         <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors text-lg">
           open_in_full
         </span>
@@ -831,7 +794,7 @@ function LedgerLogPreviewCard({
       <p className="font-label text-[9px] text-on-surface-variant mb-2 shrink-0">
         Click to view all · {log.length} entries
       </p>
-      <div className="flex-1 min-h-0 overflow-hidden pointer-events-none">
+      <div className="pointer-events-none w-full flex-1 min-h-0">
         <div className="grid grid-cols-[52px_1fr_28px] gap-x-1.5 font-label text-[9px] text-on-surface-variant border-b border-outline-variant pb-1 mb-0.5">
           <span>Date</span>
           <span>Subject</span>
@@ -883,17 +846,17 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <div className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-surface-container flex items-center gap-3 min-w-0 overflow-hidden">
+    <div className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-5 bg-surface-container flex items-center gap-3 w-full sm:w-fit max-w-full min-w-0">
       <span className="material-symbols-outlined text-2xl sm:text-3xl text-primary shrink-0">
         {icon}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0">
         <p className="font-label text-[10px] sm:text-xs text-on-surface-variant truncate">{label}</p>
-        <p className="font-display text-3xl sm:text-4xl font-bold text-primary leading-none truncate">
+        <p className="font-display text-2xl sm:text-4xl font-bold text-primary leading-none">
           {value}
         </p>
         {hint && (
-          <p className="font-label text-[9px] text-on-surface-variant/70 mt-0.5 break-words leading-snug">
+          <p className="font-label text-[9px] text-on-surface-variant/70 mt-0.5 truncate">
             {hint}
           </p>
         )}
@@ -933,15 +896,28 @@ function LedgerControls({
   onNewYearInputChange,
   onTermChange,
 }: LedgerControlsProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const handleClick = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onToggle();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [expanded, onToggle]);
+
   return (
-    <div className="paper-texture hand-drawn-border charcoal-shadow bg-surface-container overflow-hidden">
+    <div className="relative shrink-0" ref={panelRef}>
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-2 px-3 py-1.5 hover:bg-surface-container-high transition-colors text-left"
+        className="paper-texture hand-drawn-border charcoal-shadow bg-surface-container flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 hover:bg-surface-container-high transition-colors text-left whitespace-nowrap min-h-[2.75rem]"
       >
         <span className="font-label text-[10px] text-on-surface truncate">
-          {expanded ? "Set Year" : summary}
+          {summary}
         </span>
         <span className="material-symbols-outlined text-primary text-base shrink-0">
           {expanded ? "expand_less" : "expand_more"}
@@ -949,69 +925,72 @@ function LedgerControls({
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 flex flex-col sm:flex-row gap-3 sm:items-end border-t border-outline-variant pt-3">
-          <div className="flex-1">
-            <label className="font-label text-[10px] text-on-surface-variant block mb-1">
-              Academic Year
-            </label>
-            <select
-              value={showYearInput ? "__add__" : academicYear}
-              onChange={(e) => onYearChange(e.target.value)}
-              className={selectClass}
-            >
-              {allYears.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-              <option value="__add__">+ Add academic year...</option>
-            </select>
-            {showYearInput && (
-              <div className="flex gap-2 mt-2">
-                <input
-                  type="text"
-                  value={newYearInput}
-                  onChange={(e) => onNewYearInputChange(e.target.value)}
-                  placeholder="e.g. 2026/27"
-                  className={`flex-1 ${inputClass}`}
-                />
-                <button
-                  type="button"
-                  onClick={onAddYear}
-                  className="px-3 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={onCancelAddYear}
-                  className="px-3 py-2 border border-outline text-on-surface-variant hand-drawn-border font-label text-xs hover:bg-surface-variant"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
+        <div className="absolute right-0 top-full mt-2 z-50 w-[min(20rem,calc(100vw-1.5rem))] paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-3">
+          <p className="font-label text-[10px] text-on-surface-variant mb-3">Set Year</p>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="font-label text-[10px] text-on-surface-variant block mb-1">
+                Academic Year
+              </label>
+              <select
+                value={showYearInput ? "__add__" : academicYear}
+                onChange={(e) => onYearChange(e.target.value)}
+                className={selectClass}
+              >
+                {allYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+                <option value="__add__">+ Add academic year...</option>
+              </select>
+              {showYearInput && (
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={newYearInput}
+                    onChange={(e) => onNewYearInputChange(e.target.value)}
+                    placeholder="e.g. 2026/27"
+                    className={`flex-1 ${inputClass}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={onAddYear}
+                    className="px-3 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelAddYear}
+                    className="px-3 py-2 border border-outline text-on-surface-variant hand-drawn-border font-label text-xs hover:bg-surface-variant"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
 
-          <div className="flex-1">
-            <label className="font-label text-[10px] text-on-surface-variant block mb-1">
-              Semester
-            </label>
-            <div className="flex gap-2">
-              {([1, 2] as const).map((term) => (
-                <button
-                  key={term}
-                  type="button"
-                  onClick={() => onTermChange(term)}
-                  className={`flex-1 px-3 py-2 font-label text-xs hand-drawn-border transition-colors ${
-                    activeTerm === term
-                      ? "bg-primary text-on-primary charcoal-shadow"
-                      : "bg-surface-bright text-on-surface-variant hover:bg-surface-variant"
-                  }`}
-                >
-                  {term === 1 ? "First Sem" : "Second Sem"}
-                </button>
-              ))}
+            <div>
+              <label className="font-label text-[10px] text-on-surface-variant block mb-1">
+                Semester
+              </label>
+              <div className="flex gap-2">
+                {([1, 2] as const).map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => onTermChange(term)}
+                    className={`px-3 py-2 font-label text-xs hand-drawn-border transition-colors whitespace-nowrap ${
+                      activeTerm === term
+                        ? "bg-primary text-on-primary charcoal-shadow"
+                        : "bg-surface-bright text-on-surface-variant hover:bg-surface-variant"
+                    }`}
+                  >
+                    {term === 1 ? "First Sem" : "Second Sem"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

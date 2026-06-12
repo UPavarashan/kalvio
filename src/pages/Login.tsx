@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { KalvioBrand } from "../components/KalvioLogo";
 import { TEST_USERS } from "../config/testUsers";
 import { useAuth } from "../context/AuthContext";
 import { inputClass } from "../utils/formClasses";
@@ -20,14 +21,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-6">
-      <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-8">
-        <div className="text-center mb-6">
-          <h1 className="font-headline text-3xl font-semibold text-primary">Kalvio</h1>
-          <p className="font-body text-sm text-on-surface-variant mt-2">
-            Sign in to save your attendance and GPA data.
-          </p>
-        </div>
+    <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-4 sm:p-6">
+      <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-6 sm:p-8">
+        <KalvioBrand size="lg" className="mb-6" />
+        <p className="font-body text-sm text-on-surface-variant text-center -mt-4 mb-6">
+          Sign in to save your attendance and GPA data.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

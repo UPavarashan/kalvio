@@ -51,7 +51,7 @@ function ModalOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-inverse-surface/40"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-inverse-surface/40"
       onClick={onClose}
     >
       <div onClick={(e) => e.stopPropagation()}>{children}</div>
@@ -113,30 +113,30 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
   return (
     <ModalOverlay onClose={onClose}>
       <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-6 pb-4 shrink-0 border-b border-outline-variant">
-          <div>
-            <h3 className="font-headline text-xl font-medium text-primary">Calendar</h3>
-            <p className="font-body text-sm text-on-surface-variant mt-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 pb-4 shrink-0 border-b border-outline-variant">
+          <div className="min-w-0">
+            <h3 className="font-headline text-lg sm:text-xl font-medium text-primary">Calendar</h3>
+            <p className="font-body text-xs sm:text-sm text-on-surface-variant mt-1">
               All scheduled classes
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={() => shiftMonth(-1)}
-              className="p-2 hover:bg-surface-variant rounded hand-drawn-border"
+              className="p-2 hover:bg-surface-variant rounded hand-drawn-border min-w-[2.5rem] min-h-[2.5rem] flex items-center justify-center"
               aria-label="Previous month"
             >
               <span className="material-symbols-outlined text-base">chevron_left</span>
             </button>
-            <span className="font-headline text-lg font-medium text-primary min-w-[160px] text-center">
+            <span className="font-headline text-base sm:text-lg font-medium text-primary min-w-0 flex-1 sm:flex-none sm:min-w-[9rem] text-center truncate">
               {monthLabel}
             </span>
             <button
               type="button"
               onClick={() => shiftMonth(1)}
-              className="p-2 hover:bg-surface-variant rounded hand-drawn-border"
+              className="p-2 hover:bg-surface-variant rounded hand-drawn-border min-w-[2.5rem] min-h-[2.5rem] flex items-center justify-center"
               aria-label="Next month"
             >
               <span className="material-symbols-outlined text-base">chevron_right</span>
@@ -144,17 +144,22 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
             <button
               type="button"
               onClick={goToToday}
-              className="px-3 py-1.5 font-label text-[10px] border border-primary text-primary hand-drawn-border hover:bg-primary-fixed transition-colors"
+              className="px-3 py-1.5 font-label text-[10px] border border-primary text-primary hand-drawn-border hover:bg-primary-fixed transition-colors min-h-[2.5rem]"
             >
               Today
             </button>
-            <button type="button" onClick={onClose} className="p-2 hover:bg-surface-variant rounded">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close calendar"
+              className="p-2 hover:bg-surface-variant rounded min-w-[2.5rem] min-h-[2.5rem] flex items-center justify-center"
+            >
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 pt-3 sm:pt-4">
           <div className="grid grid-cols-7 gap-px bg-outline-variant/40 border border-outline-variant hand-drawn-border overflow-hidden">
             {WEEKDAYS.map((day) => (
               <div
@@ -176,7 +181,7 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
                   key={cellDate.toISOString()}
                   type="button"
                   onClick={() => setSelectedDay(cellDate)}
-                  className={`min-h-[88px] p-1.5 text-left bg-surface-container transition-colors hover:bg-surface-container-high flex flex-col gap-1 ${
+                  className={`min-h-[3.25rem] sm:min-h-[5.5rem] p-1 sm:p-1.5 text-left bg-surface-container transition-colors hover:bg-surface-container-high flex flex-col gap-0.5 sm:gap-1 ${
                     !inCurrentMonth ? "opacity-45" : ""
                   } ${isSelected ? "ring-2 ring-inset ring-primary" : ""}`}
                 >

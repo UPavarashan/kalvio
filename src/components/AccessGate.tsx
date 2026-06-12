@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { grantAccess, isAccessGranted, verifyAccessCode } from "../config/accessGate";
+import { KalvioBrand } from "./KalvioLogo";
 import { inputClass } from "../utils/formClasses";
 
 interface AccessGateProps {
@@ -30,12 +31,10 @@ export default function AccessGate({ children }: AccessGateProps) {
   return (
     <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-6">
       <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-8">
-        <div className="text-center mb-6">
-          <h1 className="font-headline text-3xl font-semibold text-primary">Kalvio</h1>
-          <p className="font-body text-sm text-on-surface-variant mt-2">
-            Enter your access code to continue.
-          </p>
-        </div>
+        <KalvioBrand size="lg" className="mb-6" />
+        <p className="font-body text-sm text-on-surface-variant text-center -mt-4 mb-6">
+          Enter your access code to continue.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
