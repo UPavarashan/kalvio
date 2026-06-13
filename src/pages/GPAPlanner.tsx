@@ -27,6 +27,7 @@ import { ModuleFormModal } from "../components/gpa/ModuleFormModal";
 import { GradeScaleModal } from "../components/gpa/GradeScaleModal";
 import UnderDevelopmentOverlay from "../components/UnderDevelopmentOverlay";
 import { useAuth } from "../context/AuthContext";
+import { getDefaultSubjectIcon } from "../utils/courseIcons";
 
 type ModuleModalState =
   | { mode: "add" }
@@ -536,11 +537,17 @@ export default function GPAPlanner() {
       {moduleModal && (
         <ModuleFormModal
           mode={moduleModal.mode}
+          course={user?.course ?? ""}
           gradePoints={gradePoints}
           module={
             moduleModal.mode === "edit"
               ? moduleModal.module
-              : { name: "", credits: 3, grade: "B", icon: "code" }
+              : {
+                  name: "",
+                  credits: 3,
+                  grade: "B",
+                  icon: getDefaultSubjectIcon(user?.course ?? ""),
+                }
           }
           onClose={() => setModuleModal(null)}
           onSave={handleSaveModule}

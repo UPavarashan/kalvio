@@ -673,6 +673,7 @@ export default function Ledger() {
         <SubjectFormModal
           mode="add"
           subject={{ name: "" }}
+          course={user?.course ?? ""}
           onClose={() => setModal(null)}
           onSave={(subject) => {
             updateTerm2(academicYear, (prev) => {
@@ -690,6 +691,7 @@ export default function Ledger() {
         <SubjectFormModal
           mode="edit"
           subject={editSubject}
+          course={user?.course ?? ""}
           onClose={() => setModal(null)}
           onSave={(subject) => {
             updateTerm2(academicYear, (prev) => {

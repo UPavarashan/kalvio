@@ -1,22 +1,24 @@
 import { useMemo, useState } from "react";
 import type { Module } from "../../data/mockData";
-import { SUBJECT_ICONS } from "../../types/ledger";
 import { getGradeOptions, iconBgForIndex } from "../../utils/grades";
+import { getDefaultSubjectIcon, getSubjectIconsForCourse } from "../../utils/courseIcons";
 import { inputClass, selectClass } from "../../utils/formClasses";
 import ModalOverlay from "../ModalOverlay";
 
 interface ModuleFormModalProps {
   mode: "add" | "edit";
   module: Partial<Module> & { name: string };
+  course: string;
   gradePoints: Record<string, number>;
   onClose: () => void;
   onSave: (module: Module) => void;
   onDelete?: () => void;
 }
 
-function cloneDraft(module: Partial<Module> & { name: string }) {
-  const icon = module.icon ?? "code";
-  const iconIndex = SUBJECT_ICONS.indexOf(icon as (typeof SUBJECT_ICONS)[number]);
+function cloneDraft(module: Partial<Module> & { name: string }, course: string) {
+  const icons = getSubjectIconsForCourse(course);
+  const icon = module.icon ?? getDefaultSubjectIcon(course);
+  const iconIndex = icons.indexOf(icon);
   return {
     id: module.id,
     name: module.name ?? "",
@@ -39,12 +41,14 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 export function ModuleFormModal({
   mode,
   module,
+  course,
   gradePoints,
   onClose,
   onSave,
   onDelete,
 }: ModuleFormModalProps) {
-  const initialDraft = useMemo(() => cloneDraft(module), [module]);
+  const subjectIcons = useMemo(() => getSubjectIconsForCourse(course), [course]);
+  const initialDraft = useMemo(() => cloneDraft(module, course), [module, course]);
   const [draft, setDraft] = useState(initialDraft);
   const gradeOptions = useMemo(() => getGradeOptions(gradePoints), [gradePoints]);
 
@@ -130,8 +134,13 @@ export function ModuleFormModal({
           </p>
 
           <FormField label="Icon">
+            {course.trim() ? (
+              <p className="font-label text-[10px] text-on-surface-variant mb-2">
+                Suggested for {course}
+              </p>
+            ) : null}
             <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
-              {SUBJECT_ICONS.map((icon, index) => (
+              {subjectIcons.map((icon, index) => (
                 <button
                   key={icon}
                   type="button"

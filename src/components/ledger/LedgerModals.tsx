@@ -2,13 +2,13 @@ import { useMemo, useState } from "react";
 import type { ClassSession, LedgerSubject, ScheduleSlot } from "../../types/ledger";
 import {
   DAYS_OF_WEEK,
-  SUBJECT_ICONS,
   DEFAULT_PASS_PERCENTAGE,
   dayLabel,
   formatScheduleSummary,
   sessionStatusToLogStatus,
 } from "../../types/ledger";
 import { buildSubjectFromForm, createDefaultSlot, formatDisplayDate, formatSessionDateTime, getDefaultRecurringRange, getEditablePastSessions, parseInputDate } from "../../utils/ledger";
+import { getDefaultSubjectIcon, getSubjectIconsForCourse } from "../../utils/courseIcons";
 import { inputClass, selectClass } from "../../utils/formClasses";
 import { TimeSelect } from "../TimeSelect";
 import ModalOverlay from "../ModalOverlay";
@@ -16,17 +16,18 @@ import ModalOverlay from "../ModalOverlay";
 interface SubjectFormModalProps {
   mode: "add" | "edit";
   subject: Partial<LedgerSubject> & { name: string };
+  course: string;
   onClose: () => void;
   onSave: (subject: LedgerSubject) => void;
   onDeleteSubject?: () => void;
 }
 
-function cloneDraft(subject: Partial<LedgerSubject> & { name: string }) {
+function cloneDraft(subject: Partial<LedgerSubject> & { name: string }, course: string) {
   const defaultRange = getDefaultRecurringRange();
   return {
     id: subject.id,
     name: subject.name ?? "",
-    icon: subject.icon ?? "touch_app",
+    icon: subject.icon ?? getDefaultSubjectIcon(course),
     recurringWeekly: subject.recurringWeekly ?? true,
     recurringFrom: subject.recurringFrom || defaultRange.from,
     recurringUntil: subject.recurringUntil || defaultRange.until,
@@ -41,11 +42,13 @@ function cloneDraft(subject: Partial<LedgerSubject> & { name: string }) {
 export function SubjectFormModal({
   mode,
   subject,
+  course,
   onClose,
   onSave,
   onDeleteSubject,
 }: SubjectFormModalProps) {
-  const initialDraft = useMemo(() => cloneDraft(subject), [subject]);
+  const subjectIcons = useMemo(() => getSubjectIconsForCourse(course), [course]);
+  const initialDraft = useMemo(() => cloneDraft(subject, course), [subject, course]);
   const [draft, setDraft] = useState(initialDraft);
 
   const isDirty = useMemo(
@@ -269,8 +272,13 @@ export function SubjectFormModal({
           )}
 
           <FormField label="Icon">
-            <div className="grid grid-cols-6 gap-2">
-              {SUBJECT_ICONS.map((icon) => (
+            {course.trim() ? (
+              <p className="font-label text-[10px] text-on-surface-variant mb-2">
+                Suggested for {course}
+              </p>
+            ) : null}
+            <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+              {subjectIcons.map((icon) => (
                 <button
                   key={icon}
                   type="button"

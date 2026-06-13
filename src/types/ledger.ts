@@ -65,20 +65,7 @@ export const DAYS_OF_WEEK = [
 
 export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
 
-export const SUBJECT_ICONS = [
-  "touch_app",
-  "storage",
-  "hub",
-  "language",
-  "terminal",
-  "database",
-  "functions",
-  "psychology",
-  "code",
-  "science",
-  "lan",
-  "engineering",
-] as const;
+export { SUBJECT_ICONS } from "../utils/courseIcons";
 
 export type LogStatus = AttendanceLogEntry["status"];
 
