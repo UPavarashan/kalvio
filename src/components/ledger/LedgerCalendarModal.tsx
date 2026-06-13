@@ -42,7 +42,7 @@ function SessionStatusLabel({ status }: { status: ClassSession["status"] }) {
   return <>{labels[status]}</>;
 }
 
-function ModalOverlay({
+function CalendarModalOverlay({
   children,
   onClose,
 }: {
@@ -51,10 +51,15 @@ function ModalOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-inverse-surface/40"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-3 sm:p-4 bg-inverse-surface/40"
       onClick={onClose}
     >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+      <div
+        className="w-full max-w-5xl max-h-[min(90dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem))] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -111,7 +116,7 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
   };
 
   return (
-    <ModalOverlay onClose={onClose}>
+    <CalendarModalOverlay onClose={onClose}>
       <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 pb-4 shrink-0 border-b border-outline-variant">
           <div className="min-w-0">
@@ -160,7 +165,8 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 pt-3 sm:pt-4">
-          <div className="grid grid-cols-7 gap-px bg-outline-variant/40 border border-outline-variant hand-drawn-border overflow-hidden">
+          <div className="overflow-x-auto -mx-1 px-1">
+          <div className="grid grid-cols-7 gap-px bg-outline-variant/40 border border-outline-variant hand-drawn-border overflow-hidden min-w-[280px]">
             {WEEKDAYS.map((day) => (
               <div
                 key={day}
@@ -181,7 +187,7 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
                   key={cellDate.toISOString()}
                   type="button"
                   onClick={() => setSelectedDay(cellDate)}
-                  className={`min-h-[3.25rem] sm:min-h-[5.5rem] p-1 sm:p-1.5 text-left bg-surface-container transition-colors hover:bg-surface-container-high flex flex-col gap-0.5 sm:gap-1 ${
+                  className={`min-h-[4rem] sm:min-h-[5.5rem] p-1 sm:p-1.5 text-left bg-surface-container transition-colors hover:bg-surface-container-high flex flex-col gap-0.5 sm:gap-1 ${
                     !inCurrentMonth ? "opacity-45" : ""
                   } ${isSelected ? "ring-2 ring-inset ring-primary" : ""}`}
                 >
@@ -201,7 +207,7 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
                     {daySessions.slice(0, 3).map(({ subject, session }) => (
                       <div
                         key={session.id}
-                        className={`truncate px-1 py-px font-label text-[8px] border ${sessionStatusStyles(session.status)}`}
+                        className={`truncate px-1 py-px font-label text-[9px] sm:text-[8px] border ${sessionStatusStyles(session.status)}`}
                         title={`${subject.name} · ${formatTimeShort(session.time)} · ${session.status}`}
                       >
                         {formatTimeShort(session.time)} {subject.name}
@@ -216,6 +222,7 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
                 </button>
               );
             })}
+          </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3 font-label text-[9px] text-on-surface-variant">
@@ -288,6 +295,6 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
           )}
         </div>
       </div>
-    </ModalOverlay>
+    </CalendarModalOverlay>
   );
 }

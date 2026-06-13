@@ -5,28 +5,12 @@ import {
   GRADE_LETTERS,
   cloneGradeScale,
 } from "../../utils/grades";
+import ModalOverlay from "../ModalOverlay";
 
 interface GradeScaleModalProps {
   gradePoints: Record<string, number>;
   onClose: () => void;
   onSave: (scale: Record<string, number>) => void;
-}
-
-function ModalOverlay({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose?: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-inverse-surface/40"
-      onClick={onClose}
-    >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
-    </div>
-  );
 }
 
 const inputClass =
@@ -63,7 +47,7 @@ export function GradeScaleModal({ gradePoints, onClose, onSave }: GradeScaleModa
 
   return (
     <ModalOverlay onClose={isDirty ? undefined : onClose}>
-      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-md">
         <h3 className="font-headline text-xl font-medium text-primary mb-2">
           Grade Scale
         </h3>

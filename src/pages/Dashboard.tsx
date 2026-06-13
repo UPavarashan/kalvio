@@ -180,16 +180,16 @@ export default function Dashboard() {
       </section>
 
       <section className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="font-headline text-2xl font-medium text-primary">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+          <h3 className="font-headline text-xl sm:text-2xl font-medium text-primary">
             Upcoming Tasks
           </h3>
           <button
             type="button"
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow hover:translate-y-0.5 transition-transform"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow hover:translate-y-0.5 transition-transform shrink-0 self-start sm:self-auto"
           >
             <span className="material-symbols-outlined text-sm">add</span>
-            New Task
+            <span className="sm:inline">New Task</span>
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

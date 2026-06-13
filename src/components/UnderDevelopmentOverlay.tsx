@@ -22,7 +22,7 @@ export default function UnderDevelopmentOverlay({ children }: { children: ReactN
         className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4"
         aria-live="polite"
       >
-        <div className="paper-texture hand-drawn-border border-2 border-dashed border-error/50 px-10 py-8 text-center -rotate-3 charcoal-shadow-lg bg-surface-container/90 max-w-sm w-full pointer-events-auto">
+        <div className="paper-texture hand-drawn-border border-2 border-dashed border-error/50 px-6 sm:px-10 py-6 sm:py-8 text-center -rotate-3 charcoal-shadow-lg bg-surface-container/90 max-w-sm w-full pointer-events-auto pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <p className="font-label text-[10px] tracking-[0.35em] text-error uppercase mb-3">
             Classified
           </p>

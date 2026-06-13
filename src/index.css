@@ -58,6 +58,11 @@
   --spacing-gutter: 24px;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background-color: var(--color-background);
   background-image:

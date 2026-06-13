@@ -92,7 +92,7 @@ export function KalvioBrand({
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
       <KalvioLogo size={size} />
-      <h1 className="font-headline text-3xl font-semibold text-primary mt-3">Kalvio</h1>
+      <h1 className="font-headline text-2xl sm:text-3xl font-semibold text-primary mt-3">Kalvio</h1>
       {showTagline && (
         <p className="font-label text-[10px] text-on-surface-variant tracking-widest uppercase mt-1">
           Student Hub

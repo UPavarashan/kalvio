@@ -11,7 +11,7 @@ export default function AuthGate({ children }: AuthGateProps) {
 
   if (!isReady) {
     return (
-      <div className="min-h-screen bg-surface paper-texture flex items-center justify-center">
+      <div className="min-h-screen bg-surface paper-texture flex items-center justify-center pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
         <p className="font-label text-sm text-on-surface-variant">Loading…</p>
       </div>
     );

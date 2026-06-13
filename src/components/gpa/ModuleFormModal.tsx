@@ -3,6 +3,7 @@ import type { Module } from "../../data/mockData";
 import { SUBJECT_ICONS } from "../../types/ledger";
 import { getGradeOptions, iconBgForIndex } from "../../utils/grades";
 import { inputClass, selectClass } from "../../utils/formClasses";
+import ModalOverlay from "../ModalOverlay";
 
 interface ModuleFormModalProps {
   mode: "add" | "edit";
@@ -24,23 +25,6 @@ function cloneDraft(module: Partial<Module> & { name: string }) {
     icon,
     iconBg: module.iconBg ?? iconBgForIndex(iconIndex >= 0 ? iconIndex : 0),
   };
-}
-
-function ModalOverlay({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose?: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-inverse-surface/40"
-      onClick={onClose}
-    >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
-    </div>
-  );
 }
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -87,7 +71,7 @@ export function ModuleFormModal({
 
   return (
     <ModalOverlay onClose={isDirty ? undefined : onClose}>
-      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-lg">
         <h3 className="font-headline text-xl font-medium text-primary mb-6">
           {mode === "add" ? "Add Module" : "Edit Module"}
         </h3>
@@ -103,7 +87,7 @@ export function ModuleFormModal({
             />
           </FormField>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Credits">
               <input
                 type="number"
@@ -146,7 +130,7 @@ export function ModuleFormModal({
           </p>
 
           <FormField label="Icon">
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
               {SUBJECT_ICONS.map((icon, index) => (
                 <button
                   key={icon}

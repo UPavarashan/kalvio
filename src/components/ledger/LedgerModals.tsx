@@ -11,6 +11,7 @@ import {
 import { buildSubjectFromForm, createDefaultSlot, formatDisplayDate, formatSessionDateTime, getDefaultRecurringRange, getEditablePastSessions, parseInputDate } from "../../utils/ledger";
 import { inputClass, selectClass } from "../../utils/formClasses";
 import { TimeSelect } from "../TimeSelect";
+import ModalOverlay from "../ModalOverlay";
 
 interface SubjectFormModalProps {
   mode: "add" | "edit";
@@ -93,7 +94,7 @@ export function SubjectFormModal({
 
   return (
     <ModalOverlay onClose={isDirty ? undefined : onClose}>
-      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-lg">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-headline text-xl font-medium text-primary">
             {mode === "add" ? "Add Subject" : "Edit Subject"}
@@ -132,13 +133,16 @@ export function SubjectFormModal({
 
           <FormField label="Class Times">
             <div className="space-y-2">
-              <div className="grid grid-cols-[1fr_1fr_28px] gap-2 font-label text-[10px] text-on-surface-variant">
+              <div className="hidden sm:grid grid-cols-[1fr_1fr_28px] gap-2 font-label text-[10px] text-on-surface-variant">
                 <span>Day</span>
                 <span>Time</span>
                 <span />
               </div>
               {draft.schedules.map((slot) => (
-                <div key={slot.id} className="grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
+                <div
+                  key={slot.id}
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_28px] gap-2 items-center"
+                >
                   <select
                     value={slot.dayOfWeek}
                     onChange={(e) => updateSchedule(slot.id, { dayOfWeek: e.target.value })}
@@ -409,7 +413,8 @@ export function LedgerLogModal({ log, onClose }: LedgerLogModalProps) {
               No entries match your filters.
             </p>
           ) : (
-            <table className="w-full table-fixed border-collapse">
+            <div className="overflow-x-auto -mx-1 px-1">
+            <table className="w-full min-w-[260px] table-fixed border-collapse">
               <thead className="sticky top-0 z-10 bg-surface-container">
                 <tr className="font-label text-[10px] text-on-surface-variant border-b border-outline-variant">
                   <th className="text-left pb-2 pr-2 font-normal w-[88px]">Date</th>
@@ -434,6 +439,7 @@ export function LedgerLogModal({ log, onClose }: LedgerLogModalProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -449,23 +455,6 @@ function LogStatChar({ status }: { status: string }) {
     C: "text-on-surface-variant line-through",
   };
   return <span className={styles[status] ?? ""}>{status}</span>;
-}
-
-function ModalOverlay({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose?: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-inverse-surface/40"
-      onClick={onClose}
-    >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
-    </div>
-  );
 }
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {

@@ -30,8 +30,8 @@ export default function AccessGate({ children }: AccessGateProps) {
 
   if (!isAccessCodeConfigured()) {
     return (
-      <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-6">
-        <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-8 text-center">
+      <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-6 sm:p-8 text-center">
           <KalvioBrand size="lg" className="mb-6" />
           <p className="font-body text-sm text-error">
             Access code is not configured. Set <code className="font-mono text-xs">VITE_ACCESS_CODE</code> in
@@ -43,8 +43,8 @@ export default function AccessGate({ children }: AccessGateProps) {
   }
 
   return (
-    <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-6">
-      <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-8">
+    <div className="min-h-screen bg-surface paper-texture flex items-center justify-center p-4 sm:p-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-6 sm:p-8">
         <KalvioBrand size="lg" className="mb-6" />
         <p className="font-body text-sm text-on-surface-variant text-center -mt-4 mb-6">
           Enter your access code to continue.

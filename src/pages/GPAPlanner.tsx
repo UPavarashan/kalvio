@@ -244,11 +244,11 @@ export default function GPAPlanner() {
         onTermChange={handleTermChange}
       />
 
-      <section className="paper-texture hand-drawn-border charcoal-shadow-lg p-10 bg-surface-container relative overflow-hidden">
+      <section className="paper-texture hand-drawn-border charcoal-shadow-lg p-4 sm:p-6 md:p-10 bg-surface-container relative overflow-hidden">
         <div className="absolute -top-4 -right-4 opacity-10">
-          <span className="material-symbols-outlined text-[120px]">auto_awesome</span>
+          <span className="material-symbols-outlined text-[80px] sm:text-[120px]">auto_awesome</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-10 items-center">
           <div className="space-y-4">
             <h2 className="font-display text-2xl sm:text-3xl font-semibold text-primary ink-underline inline-block">
               GPA Planner
@@ -272,7 +272,7 @@ export default function GPAPlanner() {
             <p className="font-label text-xs text-on-surface-variant mb-2">
               {formatTermLabel(selectedSemester).toUpperCase()} GPA
             </p>
-            <span className="font-display text-[64px] font-bold text-primary leading-none">
+            <span className="font-display text-4xl sm:text-5xl md:text-[64px] font-bold text-primary leading-none">
               {formatGPA(semesterGpa)}
             </span>
             {gpaDelta !== null && (
@@ -331,8 +331,8 @@ export default function GPAPlanner() {
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="font-headline text-2xl font-medium text-primary">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-10">
+            <h3 className="font-headline text-xl sm:text-2xl font-medium text-primary">
               GPA Trend
             </h3>
             <div className="flex gap-2 items-center">
@@ -342,7 +342,7 @@ export default function GPAPlanner() {
               </span>
             </div>
           </div>
-          <div className="h-64 flex items-end justify-around gap-4 px-4 border-b-2 border-primary border-l-2">
+          <div className="h-64 flex items-end justify-around gap-2 sm:gap-4 px-2 sm:px-4 border-b-2 border-primary border-l-2 overflow-x-auto">
             {gpaBySemester.map((sem) => {
               const isSelected = sem.id === selectedSemesterId;
               return (
@@ -454,7 +454,7 @@ export default function GPAPlanner() {
           </div>
         </div>
 
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(min(100%,240px),1fr))] gap-4">
           {modules.length === 0 ? (
             <div className="col-span-full py-12 text-center paper-texture hand-drawn-border bg-surface-bright">
               <p className="font-label text-sm text-on-surface-variant">
@@ -553,16 +553,16 @@ export default function GPAPlanner() {
       )}
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-10 bg-surface-container-high hand-drawn-border charcoal-shadow space-y-6">
-          <h3 className="font-headline text-2xl font-medium text-primary">
+        <div className="p-4 sm:p-6 md:p-10 bg-surface-container-high hand-drawn-border charcoal-shadow space-y-4 sm:space-y-6">
+          <h3 className="font-headline text-xl sm:text-2xl font-medium text-primary">
             Target GPA Calculator
           </h3>
-          <p className="font-body text-on-surface-variant">
+          <p className="font-body text-sm sm:text-base text-on-surface-variant">
             I want to graduate with a CGPA of:
           </p>
-          <div className="flex items-end gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
             <input
-              className="w-32 bg-transparent border-b-2 border-primary font-display text-5xl text-primary focus:ring-0 outline-none"
+              className="w-full sm:w-32 bg-transparent border-b-2 border-primary font-display text-3xl sm:text-5xl text-primary focus:ring-0 outline-none"
               step="0.01"
               type="number"
               min="0"
@@ -587,9 +587,9 @@ export default function GPAPlanner() {
           </div>
         </div>
 
-        <div className="p-10 bg-surface-container-high hand-drawn-border charcoal-shadow space-y-6">
-          <div className="flex justify-between items-start gap-4">
-            <h3 className="font-headline text-2xl font-medium text-primary">
+        <div className="p-4 sm:p-6 md:p-10 bg-surface-container-high hand-drawn-border charcoal-shadow space-y-4 sm:space-y-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start sm:gap-4">
+            <h3 className="font-headline text-xl sm:text-2xl font-medium text-primary">
               Historical Performance
             </h3>
             <div className="text-right shrink-0">
@@ -613,7 +613,8 @@ export default function GPAPlanner() {
             </div>
           </div>
 
-          <div className="border-t border-outline-variant pt-4">
+          <div className="border-t border-outline-variant pt-4 overflow-x-auto -mx-1 px-1">
+            <div className="min-w-[280px]">
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 gap-y-1 px-2 pb-2 font-label text-[10px] text-on-surface-variant uppercase tracking-wide">
               <span>Term</span>
               <span className="text-right w-14">Sem GPA</span>
@@ -666,6 +667,7 @@ export default function GPAPlanner() {
                   </button>
                 );
               })}
+            </div>
             </div>
           </div>
 

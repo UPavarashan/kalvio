@@ -522,7 +522,7 @@ export default function Ledger() {
             </span>
           </div>
           <div>
-            <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-snug whitespace-nowrap">
+            <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-snug">
               All-time attendance
             </p>
           </div>
@@ -742,13 +742,13 @@ function Header({
   const showActions = controls || onCalendar || onPendingClick;
 
   return (
-    <section className="relative z-20 flex flex-col gap-1 sm:gap-2 w-full min-w-0">
-      <div className="flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
-        <h2 className="font-headline text-xl sm:text-3xl font-semibold text-primary ink-underline shrink-0">
+    <section className="relative z-20 flex flex-col gap-2 sm:gap-2 w-full min-w-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between w-full min-w-0">
+        <h2 className="font-headline text-xl sm:text-3xl font-semibold text-primary ink-underline min-w-0">
           Attendance
         </h2>
         {showActions && (
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-auto flex-wrap justify-end">
             {onPendingClick && (
               <NotificationBell pendingItems={pendingItems} onPendingClick={onPendingClick} />
             )}
