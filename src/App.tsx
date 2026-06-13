@@ -19,8 +19,8 @@ export default function App() {
   }
 
   return (
-    <AccessGate>
-      <AuthProvider>
+    <AuthProvider>
+      <AccessGate>
         <AuthGate>
           <BrowserRouter>
             <LedgerUIProvider>
@@ -36,7 +36,7 @@ export default function App() {
             </LedgerUIProvider>
           </BrowserRouter>
         </AuthGate>
-      </AuthProvider>
-    </AccessGate>
+      </AccessGate>
+    </AuthProvider>
   );
 }
