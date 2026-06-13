@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       const message =
         error.message.toLowerCase().includes("email not confirmed")
-          ? "This account still needs email confirmation. Ask Pavarashan to disable confirm email in Supabase, or delete the account and sign up again."
+          ? "This account was created before email confirmation was turned off. Delete it in Supabase and sign up again, or ask Pavarashan to confirm it manually."
           : error.message;
       return { ok: false as const, message };
     }

@@ -44,7 +44,7 @@ export default function Login() {
         return;
       }
 
-      setInfo("Account created. You can sign in now.");
+      setInfo("Account created. Sign in with your email and password.");
       setMode("signin");
       setPassword("");
     } finally {
