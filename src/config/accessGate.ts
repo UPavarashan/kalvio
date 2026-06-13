@@ -25,3 +25,7 @@ export function verifyAccessCode(input: string): boolean {
   if (!expected) return false;
   return input.trim() === expected;
 }
+
+export function isAccessCodeConfigured(): boolean {
+  return getAccessCode().length > 0;
+}

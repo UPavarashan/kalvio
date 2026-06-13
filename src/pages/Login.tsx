@@ -11,7 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [program, setProgram] = useState("");
+  const [course, setCourse] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -32,7 +32,7 @@ export default function Login() {
         return;
       }
 
-      const result = await signUp(email, password, name, program);
+      const result = await signUp(email, password, name, course);
       if (!result.ok) {
         setError(result.message);
         setPassword("");
@@ -52,9 +52,9 @@ export default function Login() {
       <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-6 sm:p-8">
         <KalvioBrand size="lg" className="mb-6" />
         <p className="font-body text-sm text-on-surface-variant text-center -mt-4 mb-6">
-          {mode === "signin"
-            ? "Sign in to access your attendance and GPA data."
-            : "Create an account to save your data in the cloud."}
+          &ldquo;Thanks for testing Kalvio with me — it&apos;s still in the early stages, so things
+          might not work exactly as they should. Honest feedback is always welcome. Thank you!&rdquo;
+          <span className="block mt-2 text-on-surface">— Pavarashan</span>
         </p>
 
         <div className="flex gap-2 mb-4">
@@ -116,18 +116,18 @@ export default function Login() {
               </div>
               <div>
                 <label
-                  htmlFor="login-program"
+                  htmlFor="login-course"
                   className="font-label text-[10px] text-on-surface-variant block mb-1"
                 >
-                  Program
+                  Course
                 </label>
                 <input
-                  id="login-program"
+                  id="login-course"
                   type="text"
                   required
-                  value={program}
+                  value={course}
                   onChange={(e) => {
-                    setProgram(e.target.value);
+                    setCourse(e.target.value);
                     if (error) setError("");
                   }}
                   className={inputClass}

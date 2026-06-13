@@ -10,7 +10,7 @@ interface AuthContextValue {
     email: string,
     password: string,
     name: string,
-    program: string
+    course: string
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
   logout: () => Promise<void>;
 }
@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 async function fetchProfile(userId: string): Promise<AppUser | null> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, name, program")
+    .select("id, email, name, course")
     .eq("id", userId)
     .maybeSingle();
 
@@ -30,7 +30,7 @@ async function fetchProfile(userId: string): Promise<AppUser | null> {
     id: data.id,
     email: data.email ?? "",
     name: data.name,
-    program: data.program,
+    course: data.course,
   };
 }
 
@@ -86,14 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string, program: string) => {
+    async (email: string, password: string, name: string, course: string) => {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: {
             name: name.trim(),
-            program: program.trim(),
+            course: course.trim(),
           },
         },
       });

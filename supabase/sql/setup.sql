@@ -6,7 +6,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   name text not null default '',
-  program text not null default '',
+  course text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -90,12 +90,12 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, name, program)
+  insert into public.profiles (id, email, name, course)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data->>'name', ''),
-    coalesce(new.raw_user_meta_data->>'program', '')
+    coalesce(new.raw_user_meta_data->>'course', '')
   );
 
   insert into public.user_attendance (user_id)
@@ -112,3 +112,14 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Migration: rename program → course on existing databases
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'program'
+  ) then
+    alter table public.profiles rename column program to course;
+  end if;
+end $$;
