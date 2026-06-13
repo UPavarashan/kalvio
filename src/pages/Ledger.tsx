@@ -15,6 +15,7 @@ import {
   SubjectFormModal,
 } from "../components/ledger/LedgerModals";
 import { LedgerCalendarModal } from "../components/ledger/LedgerCalendarModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import NotificationBell from "../components/NotificationBell";
 import { useLedgerUI } from "../context/LedgerUIContext";
 import {
@@ -130,6 +131,8 @@ export default function Ledger() {
     | { type: "editSubject"; subjectId: string }
     | { type: "allClasses" }
     | { type: "log" }
+    | { type: "deleteYear"; year: string }
+    | { type: "cannotDeleteLastYear" }
     | null
   >(null);
 
@@ -283,6 +286,38 @@ export default function Ledger() {
     [user]
   );
 
+  const performDeleteYear = useCallback(
+    (yearToDelete: string) => {
+      const remaining = allYears.filter((year) => year !== yearToDelete);
+      const nextYear = remaining[0] ?? CURRENT_YEAR;
+
+      setYears(remaining);
+      setTerm2ByYear((prev) => {
+        const next = { ...prev };
+        delete next[yearToDelete];
+        return next;
+      });
+      setAcademicYear(nextYear);
+      setActiveTerm(2);
+      setShowYearInput(false);
+      setNewYearInput("");
+      setControlsExpanded(false);
+
+      if (user) {
+        const nextByYear = Object.fromEntries(
+          remaining.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
+        );
+        void saveAttendanceStore(user.id, {
+          years: remaining,
+          byYear: nextByYear,
+          selectedYear: nextYear,
+          selectedTerm: 2,
+        });
+      }
+    },
+    [allYears, term2ByYear, user]
+  );
+
   const controlsProps = {
     expanded: controlsExpanded,
     summary: controlsSummary,
@@ -319,39 +354,12 @@ export default function Ledger() {
     },
     onDeleteYear: () => {
       if (allYears.length <= 1) {
-        window.alert("Keep at least one academic year. Add another year first, then you can delete this one.");
+        setControlsExpanded(false);
+        setModal({ type: "cannotDeleteLastYear" });
         return;
       }
-      const confirmed = window.confirm(
-        `Delete ${academicYear} and all its attendance data? This cannot be undone.`
-      );
-      if (!confirmed) return;
-
-      const remaining = allYears.filter((year) => year !== academicYear);
-      const nextYear = remaining[0] ?? CURRENT_YEAR;
-
-      setYears(remaining);
-      setTerm2ByYear((prev) => {
-        const next = { ...prev };
-        delete next[academicYear];
-        return next;
-      });
-      setAcademicYear(nextYear);
-      setActiveTerm(2);
-      setShowYearInput(false);
-      setNewYearInput("");
-
-      if (user) {
-        const nextByYear = Object.fromEntries(
-          remaining.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
-        );
-        void saveAttendanceStore(user.id, {
-          years: remaining,
-          byYear: nextByYear,
-          selectedYear: nextYear,
-          selectedTerm: 2,
-        });
-      }
+      setControlsExpanded(false);
+      setModal({ type: "deleteYear", year: academicYear });
     },
     canDeleteYear: allYears.length > 1,
     onNewYearInputChange: setNewYearInput,
@@ -715,6 +723,30 @@ export default function Ledger() {
       )}
       {modal?.type === "log" && (
         <LedgerLogModal log={displayedData.log} onClose={() => setModal(null)} />
+      )}
+      {modal?.type === "deleteYear" && (
+        <ConfirmDialog
+          title="Delete academic year?"
+          message={`This will permanently delete ${modal.year} and all subjects, attendance records, and sessions for that year. This cannot be undone.`}
+          confirmLabel="Delete year"
+          cancelLabel="Keep year"
+          destructive
+          onCancel={() => setModal(null)}
+          onConfirm={() => {
+            performDeleteYear(modal.year);
+            setModal(null);
+          }}
+        />
+      )}
+      {modal?.type === "cannotDeleteLastYear" && (
+        <ConfirmDialog
+          title="Can't delete this year"
+          message="Keep at least one academic year. Add another year first, then you can delete this one."
+          confirmLabel="OK"
+          hideCancel
+          onCancel={() => setModal(null)}
+          onConfirm={() => setModal(null)}
+        />
       )}
     </div>
   );
