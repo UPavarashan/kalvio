@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { KalvioBrand } from "../components/KalvioLogo";
 import { useAuth } from "../context/AuthContext";
 import { inputClass } from "../utils/formClasses";
@@ -15,6 +15,26 @@ export default function Login() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+
+    const isEmailCallback =
+      params.has("code") ||
+      hash.includes("type=signup") ||
+      hash.includes("type=email") ||
+      hash.includes("type=recovery");
+
+    if (!isEmailCallback) return;
+
+    if (hash.includes("type=signup") || hash.includes("type=email")) {
+      setInfo("Email confirmed! You can sign in now.");
+      setMode("signin");
+    }
+
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();

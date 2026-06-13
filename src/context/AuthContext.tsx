@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { requireSupabase } from "../utils/supabaseClient";
+import { getEmailRedirectUrl } from "../config/auth";
 import type { AppUser } from "../types/user";
 
 interface AuthContextValue {
@@ -91,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: getEmailRedirectUrl(),
           data: {
             name: name.trim(),
             course: course.trim(),
