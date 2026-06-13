@@ -38,65 +38,112 @@ function formatAuthError(message: string): string {
   if (lower.includes("rate limit") && lower.includes("email")) {
     return "Supabase email limit reached (~2/hour on the free built-in mailer). Turn off “Confirm email” under Authentication → Providers → Email, wait about an hour, then try again.";
   }
+  if (lower.includes("invalid login credentials")) {
+    return "Wrong email or password. If you just signed up, use the same email and password from sign up.";
+  }
   return message;
 }
 
+function userFromSession(session: Session): AppUser {
+  const meta = session.user.user_metadata ?? {};
+  return {
+    id: session.user.id,
+    email: session.user.email ?? "",
+    name: typeof meta.name === "string" ? meta.name : "",
+    course: typeof meta.course === "string" ? meta.course : "",
+  };
+}
+
+type ProfileRow = {
+  id: string;
+  email: string | null;
+  name: string;
+  course?: string;
+  program?: string;
+};
+
 async function fetchProfile(userId: string): Promise<AppUser | null> {
-  const { data, error } = await requireSupabase()
+  const supabase = requireSupabase();
+
+  const withCourse = await supabase
     .from("profiles")
     .select("id, email, name, course")
     .eq("id", userId)
     .maybeSingle();
 
-  if (error) {
-    console.error("Failed to load profile:", error.message);
+  if (!withCourse.error && withCourse.data) {
+    return profileRowToUser(withCourse.data);
+  }
+
+  const courseMissing = withCourse.error?.message.toLowerCase().includes("course");
+  if (!courseMissing) {
+    if (withCourse.error) console.error("Failed to load profile:", withCourse.error.message);
     return null;
   }
 
-  if (!data) return null;
+  const withProgram = await supabase
+    .from("profiles")
+    .select("id, email, name, program")
+    .eq("id", userId)
+    .maybeSingle();
 
+  if (withProgram.error) {
+    console.error("Failed to load profile:", withProgram.error.message);
+    return null;
+  }
+
+  if (!withProgram.data) return null;
+  return profileRowToUser(withProgram.data);
+}
+
+function profileRowToUser(row: ProfileRow): AppUser {
   return {
-    id: data.id,
-    email: data.email ?? "",
-    name: data.name,
-    course: data.course,
+    id: row.id,
+    email: row.email ?? "",
+    name: row.name,
+    course: row.course ?? row.program ?? "",
   };
 }
 
-async function ensureUserFromSession(session: Session): Promise<AppUser | null> {
-  const existing = await fetchProfile(session.user.id);
-  if (existing) return existing;
+async function syncProfileInBackground(session: Session, baseUser: AppUser): Promise<void> {
+  const profile = await fetchProfile(session.user.id);
+  if (profile) return;
 
-  const meta = session.user.user_metadata ?? {};
-  const email = session.user.email ?? "";
-  const name = typeof meta.name === "string" ? meta.name : "";
-  const course = typeof meta.course === "string" ? meta.course : "";
-
-  const { error: insertError } = await requireSupabase().from("profiles").insert({
-    id: session.user.id,
-    email,
-    name,
-    course,
+  const { error } = await requireSupabase().from("profiles").insert({
+    id: baseUser.id,
+    email: baseUser.email,
+    name: baseUser.name,
+    course: baseUser.course,
   });
 
-  if (insertError) {
-    console.error("Failed to create profile:", insertError.message);
-    const retry = await fetchProfile(session.user.id);
-    if (retry) return retry;
+  if (error) {
+    const { error: legacyError } = await requireSupabase().from("profiles").insert({
+      id: baseUser.id,
+      email: baseUser.email,
+      name: baseUser.name,
+      program: baseUser.course,
+    });
 
-    if (name || course || email) {
-      return { id: session.user.id, email, name, course };
+    if (legacyError && !legacyError.message.toLowerCase().includes("duplicate")) {
+      console.error("Failed to create profile:", legacyError.message);
     }
-
-    return null;
   }
-
-  return fetchProfile(session.user.id);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isReady, setIsReady] = useState(false);
+
+  const applySession = useCallback((session: Session | null) => {
+    if (!session?.user) {
+      setUser(null);
+      return;
+    }
+
+    const nextUser = userFromSession(session);
+    setUser(nextUser);
+    void syncProfileInBackground(session, nextUser);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -115,9 +162,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.session?.user) {
-        const profile = await ensureUserFromSession(data.session);
-        if (!mounted) return;
-        setUser(profile);
+        setUser(userFromSession(data.session));
+        void syncProfileInBackground(data.session, userFromSession(data.session));
       } else {
         setUser(null);
       }
@@ -127,17 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initSession();
 
-    const { data: listener } = requireSupabase().auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = requireSupabase().auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
-
-      if (session?.user) {
-        const profile = await ensureUserFromSession(session);
-        if (!mounted) return;
-        setUser(profile);
-      } else {
-        setUser(null);
-      }
-
+      applySession(session);
       setIsReady(true);
     });
 
@@ -145,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [applySession]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { data, error } = await requireSupabase().auth.signInWithPassword({
@@ -166,16 +204,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false as const, message: "Sign in succeeded but no session was created. Try again." };
     }
 
-    const profile = await ensureUserFromSession(data.session);
-    if (!profile) {
-      return {
-        ok: false as const,
-        message:
-          "Signed in, but your profile could not be loaded. Make sure setup.sql was run in Supabase, then try again.",
-      };
-    }
-
-    setUser(profile);
+    const nextUser = userFromSession(data.session);
+    setUser(nextUser);
+    void syncProfileInBackground(data.session, nextUser);
     return { ok: true as const };
   }, []);
 
@@ -205,8 +236,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.session) {
-        const profile = await ensureUserFromSession(data.session);
-        if (profile) setUser(profile);
+        const nextUser = userFromSession(data.session);
+        setUser(nextUser);
+        void syncProfileInBackground(data.session, nextUser);
       }
 
       return {

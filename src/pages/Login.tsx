@@ -37,7 +37,9 @@ export default function Login() {
         if (!result.ok) {
           setError(result.message);
           setPassword("");
+          return;
         }
+        setInfo("Signed in. Loading your dashboard…");
         return;
       }
 
