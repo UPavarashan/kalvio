@@ -10,8 +10,6 @@ import {
   calculateGPA,
   DEFAULT_GRADE_POINTS,
   formatGPA,
-  loadGradeScale,
-  saveGradeScale,
 } from "../utils/grades";
 import {
   getAcademicYears,
@@ -22,10 +20,8 @@ import {
 } from "../utils/gpaSemesters";
 import { GPAControls } from "../components/gpa/GPAControls";
 import {
-  loadModulesBySemester,
-  loadSelectedSemester,
-  saveModulesBySemester,
-  saveSelectedSemester,
+  loadGpaData,
+  saveGpaData,
 } from "../utils/gpaStorage";
 import { ModuleFormModal } from "../components/gpa/ModuleFormModal";
 import { GradeScaleModal } from "../components/gpa/GradeScaleModal";
@@ -48,13 +44,47 @@ export default function GPAPlanner() {
     ...DEFAULT_GRADE_POINTS,
   }));
   const [controlsExpanded, setControlsExpanded] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    setModulesBySemester(loadModulesBySemester(user.id));
-    setSelectedSemesterId(loadSelectedSemester(user.id));
-    setGradePoints(loadGradeScale(user.id));
+    if (!user) {
+      setHydrated(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    loadGpaData(user.id)
+      .then((data) => {
+        if (cancelled) return;
+        setModulesBySemester(data.modulesBySemester);
+        setSelectedSemesterId(data.selectedSemesterId);
+        setGradePoints(data.gradeScale);
+        setHydrated(true);
+      })
+      .catch(() => {
+        if (!cancelled) setHydrated(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
+
+  const persistGpa = (
+    patch: Partial<{
+      modulesBySemester: Record<string, Module[]>;
+      selectedSemesterId: string;
+      gradeScale: Record<string, number>;
+    }>
+  ) => {
+    if (!user) return;
+    void saveGpaData(user.id, {
+      modulesBySemester: patch.modulesBySemester ?? modulesBySemester,
+      selectedSemesterId: patch.selectedSemesterId ?? selectedSemesterId,
+      gradeScale: patch.gradeScale ?? gradePoints,
+    });
+  };
 
   const selectedSemester =
     GPA_SEMESTERS.find((s) => s.id === selectedSemesterId) ?? GPA_SEMESTERS[GPA_SEMESTERS.length - 1];
@@ -142,7 +172,7 @@ export default function GPAPlanner() {
   }, [targetGpa, cumulativeThroughSelected, creditsThroughSelected, totalCredits]);
 
   const handleSaveModule = (module: Module) => {
-    if (!user) return;
+    if (!user || !hydrated) return;
     setModulesBySemester((prev) => {
       const current = prev[selectedSemesterId] ?? [];
       const next = {
@@ -152,29 +182,29 @@ export default function GPAPlanner() {
             ? current.map((m) => (m.id === module.id ? module : m))
             : [...current, module],
       };
-      saveModulesBySemester(user.id, next);
+      persistGpa({ modulesBySemester: next });
       return next;
     });
     setModuleModal(null);
   };
 
   const handleDeleteModule = (id: string) => {
-    if (!user) return;
+    if (!user || !hydrated) return;
     setModulesBySemester((prev) => {
       const next = {
         ...prev,
         [selectedSemesterId]: (prev[selectedSemesterId] ?? []).filter((m) => m.id !== id),
       };
-      saveModulesBySemester(user.id, next);
+      persistGpa({ modulesBySemester: next });
       return next;
     });
     setModuleModal(null);
   };
 
   const handleSemesterChange = (semesterId: string) => {
-    if (!user) return;
+    if (!user || !hydrated) return;
     setSelectedSemesterId(semesterId);
-    saveSelectedSemester(user.id, semesterId);
+    persistGpa({ selectedSemesterId: semesterId });
   };
 
   const academicYears = useMemo(() => getAcademicYears(), []);
@@ -192,9 +222,9 @@ export default function GPAPlanner() {
   };
 
   const handleSaveGradeScale = (scale: Record<string, number>) => {
-    if (!user) return;
+    if (!user || !hydrated) return;
     setGradePoints(scale);
-    saveGradeScale(user.id, scale);
+    persistGpa({ gradeScale: scale });
     setGradeScaleOpen(false);
   };
 

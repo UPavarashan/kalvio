@@ -71,40 +71,58 @@ export default function Ledger() {
     if (loadedForUser.current === user.id) return;
     loadedForUser.current = user.id;
 
-    const store = loadAttendanceStore(user.id);
-    const nextTerm2ByYear = Object.fromEntries(
-      store.years.map((year) => {
-        const subjects = store.byYear[year] ?? [];
-        return [
-          year,
-          {
-            ledgerSubjects: subjects,
-            log: buildLogFromSubjects(subjects),
-          },
-        ];
+    let cancelled = false;
+
+    loadAttendanceStore(user.id)
+      .then((store) => {
+        if (cancelled) return;
+
+        const nextTerm2ByYear = Object.fromEntries(
+          store.years.map((year) => {
+            const subjects = store.byYear[year] ?? [];
+            return [
+              year,
+              {
+                ledgerSubjects: subjects,
+                log: buildLogFromSubjects(subjects),
+              },
+            ];
+          })
+        );
+        setYears(store.years);
+        setTerm2ByYear(nextTerm2ByYear);
+        setAcademicYear(
+          store.selectedYear && store.years.includes(store.selectedYear)
+            ? store.selectedYear
+            : store.years[0] ?? CURRENT_YEAR
+        );
+        setActiveTerm(store.selectedTerm === 1 ? 1 : 2);
+        setHydrated(true);
       })
-    );
-    setYears(store.years);
-    setTerm2ByYear(nextTerm2ByYear);
-    setAcademicYear(
-      store.selectedYear && store.years.includes(store.selectedYear)
-        ? store.selectedYear
-        : store.years[0] ?? CURRENT_YEAR
-    );
-    setActiveTerm(store.selectedTerm === 1 ? 1 : 2);
-    setHydrated(true);
+      .catch(() => {
+        if (!cancelled) setHydrated(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
 
   useEffect(() => {
     if (!user || !hydrated) return;
-    saveAttendanceStore(user.id, {
-      years,
-      byYear: Object.fromEntries(
-        years.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
-      ),
-      selectedYear: academicYear,
-      selectedTerm: activeTerm,
-    });
+
+    const timeout = window.setTimeout(() => {
+      void saveAttendanceStore(user.id, {
+        years,
+        byYear: Object.fromEntries(
+          years.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
+        ),
+        selectedYear: academicYear,
+        selectedTerm: activeTerm,
+      });
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
   }, [years, term2ByYear, academicYear, activeTerm, user?.id, hydrated]);
 
   const [modal, setModal] = useState<
@@ -260,7 +278,7 @@ export default function Ledger() {
   const persistSelection = useCallback(
     (year: string, term: 1 | 2) => {
       if (!user) return;
-      saveAttendanceSelection(user.id, year, term);
+      void saveAttendanceSelection(user.id, year, term);
     },
     [user]
   );
@@ -327,7 +345,7 @@ export default function Ledger() {
         const nextByYear = Object.fromEntries(
           remaining.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
         );
-        saveAttendanceStore(user.id, {
+        void saveAttendanceStore(user.id, {
           years: remaining,
           byYear: nextByYear,
           selectedYear: nextYear,

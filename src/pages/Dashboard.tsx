@@ -39,17 +39,34 @@ export default function Dashboard() {
       return;
     }
 
-    const store = loadAttendanceStore(user.id);
-    const { academicYear, term, subjects } = getAttendanceSelection(
-      store,
-      LEDGER_SEMESTERS
-    );
+    let cancelled = false;
 
-    setAttendanceSnapshot({
-      last7DaysPct: computeLast7DaysPct(subjects),
-      upcomingClasses: getUpcomingSessions(subjects, 3),
-      selectionLabel: formatAttendanceSelectionLabel(academicYear, term),
-    });
+    loadAttendanceStore(user.id)
+      .then((store) => {
+        if (cancelled) return;
+        const { academicYear, term, subjects } = getAttendanceSelection(
+          store,
+          LEDGER_SEMESTERS
+        );
+        setAttendanceSnapshot({
+          last7DaysPct: computeLast7DaysPct(subjects),
+          upcomingClasses: getUpcomingSessions(subjects, 3),
+          selectionLabel: formatAttendanceSelectionLabel(academicYear, term),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAttendanceSnapshot({
+            last7DaysPct: 0,
+            upcomingClasses: [],
+            selectionLabel: "",
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, location.key, location.pathname]);
 
   const { last7DaysPct, upcomingClasses, selectionLabel } = attendanceSnapshot;

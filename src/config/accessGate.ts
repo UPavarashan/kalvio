@@ -1,18 +1,27 @@
 export const ACCESS_STORAGE_KEY = "kalvio_access_granted";
-export const ACCESS_CODE = "KALVIO2024";
+
+function getAccessCode(): string {
+  const code = import.meta.env.VITE_ACCESS_CODE?.trim();
+  if (!code) {
+    console.warn("VITE_ACCESS_CODE is not set — access gate will reject all codes.");
+  }
+  return code ?? "";
+}
 
 export function isAccessGranted(): boolean {
   try {
-    return localStorage.getItem(ACCESS_STORAGE_KEY) === "true";
+    return sessionStorage.getItem(ACCESS_STORAGE_KEY) === "true";
   } catch {
     return false;
   }
 }
 
 export function grantAccess(): void {
-  localStorage.setItem(ACCESS_STORAGE_KEY, "true");
+  sessionStorage.setItem(ACCESS_STORAGE_KEY, "true");
 }
 
 export function verifyAccessCode(input: string): boolean {
-  return input.trim() === ACCESS_CODE;
+  const expected = getAccessCode();
+  if (!expected) return false;
+  return input.trim() === expected;
 }

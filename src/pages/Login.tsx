@@ -1,23 +1,50 @@
 import { useState, type FormEvent } from "react";
 import { KalvioBrand } from "../components/KalvioLogo";
-import { TEST_USERS } from "../config/testUsers";
 import { useAuth } from "../context/AuthContext";
 import { inputClass } from "../utils/formClasses";
 
-export default function Login() {
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+type AuthMode = "signin" | "signup";
 
-  const handleSubmit = (event: FormEvent) => {
+export default function Login() {
+  const { login, signUp } = useAuth();
+  const [mode, setMode] = useState<AuthMode>("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [program, setProgram] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
+    setInfo("");
+    setSubmitting(true);
 
-    if (login(username, password)) return;
+    try {
+      if (mode === "signin") {
+        const result = await login(email, password);
+        if (!result.ok) {
+          setError(result.message);
+          setPassword("");
+        }
+        return;
+      }
 
-    setError("Incorrect username or password");
-    setPassword("");
+      const result = await signUp(email, password, name, program);
+      if (!result.ok) {
+        setError(result.message);
+        setPassword("");
+        return;
+      }
+
+      setInfo("Account created. Check your email to confirm, then sign in.");
+      setMode("signin");
+      setPassword("");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -25,29 +52,111 @@ export default function Login() {
       <div className="hand-drawn-border charcoal-shadow-lg bg-surface-container w-full max-w-sm p-6 sm:p-8">
         <KalvioBrand size="lg" className="mb-6" />
         <p className="font-body text-sm text-on-surface-variant text-center -mt-4 mb-6">
-          Sign in to save your attendance and GPA data.
+          {mode === "signin"
+            ? "Sign in to access your attendance and GPA data."
+            : "Create an account to save your data in the cloud."}
         </p>
 
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setError("");
+              setInfo("");
+            }}
+            className={`flex-1 px-3 py-2 hand-drawn-border font-label text-xs transition-colors ${
+              mode === "signin"
+                ? "bg-primary text-on-primary"
+                : "border border-outline-variant text-on-surface-variant hover:bg-surface-container-high"
+            }`}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signup");
+              setError("");
+              setInfo("");
+            }}
+            className={`flex-1 px-3 py-2 hand-drawn-border font-label text-xs transition-colors ${
+              mode === "signup"
+                ? "bg-primary text-on-primary"
+                : "border border-outline-variant text-on-surface-variant hover:bg-surface-container-high"
+            }`}
+          >
+            Sign up
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "signup" && (
+            <>
+              <div>
+                <label
+                  htmlFor="login-name"
+                  className="font-label text-[10px] text-on-surface-variant block mb-1"
+                >
+                  Name
+                </label>
+                <input
+                  id="login-name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (error) setError("");
+                  }}
+                  className={inputClass}
+                  placeholder="Your name"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="login-program"
+                  className="font-label text-[10px] text-on-surface-variant block mb-1"
+                >
+                  Program
+                </label>
+                <input
+                  id="login-program"
+                  type="text"
+                  required
+                  value={program}
+                  onChange={(e) => {
+                    setProgram(e.target.value);
+                    if (error) setError("");
+                  }}
+                  className={inputClass}
+                  placeholder="e.g. Computer Science"
+                />
+              </div>
+            </>
+          )}
+
           <div>
             <label
-              htmlFor="login-username"
+              htmlFor="login-email"
               className="font-label text-[10px] text-on-surface-variant block mb-1"
             >
-              Username
+              Email
             </label>
             <input
-              id="login-username"
-              type="text"
-              autoComplete="username"
+              id="login-email"
+              type="email"
+              autoComplete="email"
               autoFocus
-              value={username}
+              required
+              value={email}
               onChange={(e) => {
-                setUsername(e.target.value);
+                setEmail(e.target.value);
                 if (error) setError("");
               }}
               className={inputClass}
-              placeholder="test1"
+              placeholder="you@university.edu"
             />
           </div>
 
@@ -61,7 +170,9 @@ export default function Login() {
             <input
               id="login-password"
               type="password"
-              autoComplete="current-password"
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              required
+              minLength={6}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -78,25 +189,20 @@ export default function Login() {
             </p>
           )}
 
+          {info && (
+            <p className="font-label text-xs text-primary" role="status">
+              {info}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="w-full px-4 py-2.5 bg-error text-on-error hand-drawn-border font-label text-xs charcoal-shadow hover:opacity-90 transition-opacity"
+            disabled={submitting}
+            className="w-full px-4 py-2.5 bg-error text-on-error hand-drawn-border font-label text-xs charcoal-shadow hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            Sign in
+            {submitting ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
         </form>
-
-        <div className="mt-6 pt-4 border-t border-outline-variant">
-          <p className="font-label text-[10px] text-on-surface-variant mb-2">Test accounts</p>
-          <ul className="space-y-1">
-            {TEST_USERS.map((user) => (
-              <li key={user.id} className="font-label text-[10px] text-on-surface-variant">
-                <span className="text-on-surface">{user.username}</span>
-                <span className="text-on-surface-variant/70"> / test123</span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </div>
   );
