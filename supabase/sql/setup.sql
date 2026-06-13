@@ -89,20 +89,41 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  has_course boolean;
 begin
-  insert into public.profiles (id, email, name, course)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'name', ''),
-    coalesce(new.raw_user_meta_data->>'course', '')
-  );
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'course'
+  ) into has_course;
+
+  if has_course then
+    insert into public.profiles (id, email, name, course)
+    values (
+      new.id,
+      new.email,
+      coalesce(new.raw_user_meta_data->>'name', ''),
+      coalesce(new.raw_user_meta_data->>'course', '')
+    );
+  else
+    insert into public.profiles (id, email, name, program)
+    values (
+      new.id,
+      new.email,
+      coalesce(new.raw_user_meta_data->>'name', ''),
+      coalesce(new.raw_user_meta_data->>'course', '')
+    );
+  end if;
 
   insert into public.user_attendance (user_id)
-  values (new.id);
+  values (new.id)
+  on conflict (user_id) do nothing;
 
   insert into public.user_gpa (user_id)
-  values (new.id);
+  values (new.id)
+  on conflict (user_id) do nothing;
 
   return new;
 end;

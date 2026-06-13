@@ -41,6 +41,9 @@ function formatAuthError(message: string): string {
   if (lower.includes("invalid login credentials")) {
     return "Wrong email or password. If you just signed up, use the same email and password from sign up.";
   }
+  if (lower.includes("database error saving new user")) {
+    return "Database setup issue on signup. Run supabase/sql/migrate_program_to_course.sql in the Supabase SQL Editor, then try again.";
+  }
   return message;
 }
 
