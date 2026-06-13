@@ -29,7 +29,6 @@ import {
 } from "../utils/gpaStorage";
 import { ModuleFormModal } from "../components/gpa/ModuleFormModal";
 import { GradeScaleModal } from "../components/gpa/GradeScaleModal";
-import UnderDevelopmentOverlay from "../components/UnderDevelopmentOverlay";
 import { useAuth } from "../context/AuthContext";
 
 type ModuleModalState =
@@ -201,7 +200,6 @@ export default function GPAPlanner() {
   const maxGpa = 4.0;
 
   return (
-    <UnderDevelopmentOverlay>
     <div className="space-y-8 pb-16">
       <GPAControls
         expanded={controlsExpanded}
@@ -646,6 +644,5 @@ export default function GPAPlanner() {
         </div>
       </section>
     </div>
-    </UnderDevelopmentOverlay>
   );
 }

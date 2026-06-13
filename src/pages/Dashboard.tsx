@@ -1,12 +1,58 @@
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   GPA_TREND,
   UPCOMING_TASKS,
   STUDY_MATERIALS,
-  DASHBOARD_WEEKLY_COURSES,
+  LEDGER_SEMESTERS,
 } from "../data/mockData";
+import { useAuth } from "../context/AuthContext";
+import { loadAttendanceStore } from "../utils/ledgerStorage";
+import {
+  formatAttendanceSelectionLabel,
+  getAttendanceSelection,
+} from "../utils/attendanceSelection";
+import {
+  computeLast7DaysPct,
+  formatSessionDateTime,
+  getUpcomingSessions,
+} from "../utils/ledger";
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const location = useLocation();
   const maxGpa = 4.0;
+
+  const [attendanceSnapshot, setAttendanceSnapshot] = useState({
+    last7DaysPct: 0,
+    upcomingClasses: [] as ReturnType<typeof getUpcomingSessions>,
+    selectionLabel: "",
+  });
+
+  useEffect(() => {
+    if (!user) {
+      setAttendanceSnapshot({
+        last7DaysPct: 0,
+        upcomingClasses: [],
+        selectionLabel: "",
+      });
+      return;
+    }
+
+    const store = loadAttendanceStore(user.id);
+    const { academicYear, term, subjects } = getAttendanceSelection(
+      store,
+      LEDGER_SEMESTERS
+    );
+
+    setAttendanceSnapshot({
+      last7DaysPct: computeLast7DaysPct(subjects),
+      upcomingClasses: getUpcomingSessions(subjects, 3),
+      selectionLabel: formatAttendanceSelectionLabel(academicYear, term),
+    });
+  }, [user?.id, location.key, location.pathname]);
+
+  const { last7DaysPct, upcomingClasses, selectionLabel } = attendanceSnapshot;
 
   return (
     <div className="space-y-8 sm:space-y-10">
@@ -19,17 +65,17 @@ export default function Dashboard() {
         </p>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="paper-texture hand-drawn-border charcoal-shadow-lg p-6 bg-surface-container">
-          <p className="font-label text-xs text-on-surface-variant mb-2">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <div className="paper-texture hand-drawn-border charcoal-shadow-lg p-5 sm:p-6 bg-surface-container flex flex-col h-full">
+          <p className="font-label text-xs text-on-surface-variant mb-2 shrink-0">
             CURRENT GPA
           </p>
-          <div className="flex items-end gap-4">
+          <div className="flex items-end gap-4 shrink-0">
             <span className="font-display text-5xl sm:text-6xl font-bold text-primary leading-none">
               0.00
             </span>
           </div>
-          <div className="h-40 flex items-end justify-around gap-2 mt-6 border-b-2 border-primary border-l-2 px-4">
+          <div className="h-40 flex items-end justify-around gap-2 mt-6 border-b-2 border-primary border-l-2 px-4 flex-1 min-h-[10rem]">
             {GPA_TREND.map((sem) => (
               <div key={sem.label} className="flex flex-col items-center w-full max-w-[48px]">
                 <div
@@ -44,13 +90,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="paper-texture hand-drawn-border charcoal-shadow-lg p-6 bg-surface-container">
-          <p className="font-label text-xs text-on-surface-variant mb-4">
+        <div className="paper-texture hand-drawn-border charcoal-shadow-lg p-5 sm:p-6 bg-surface-container flex flex-col h-full min-h-[17rem]">
+          <p className="font-label text-xs text-on-surface-variant mb-1 shrink-0">
             WEEKLY ATTENDANCE
           </p>
-          <div className="flex items-center gap-8">
-            <div className="relative w-28 h-28 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+          {selectionLabel && (
+            <p className="font-label text-[10px] text-on-surface-variant mb-3 shrink-0">
+              {selectionLabel}
+            </p>
+          )}
+          <div className="flex flex-1 min-h-0 items-center gap-4 sm:gap-5">
+            <div className="relative w-[5.5rem] h-[5.5rem] sm:w-24 sm:h-24 shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
                 <circle
                   cx="18"
                   cy="18"
@@ -66,30 +117,46 @@ export default function Dashboard() {
                   fill="none"
                   stroke="#4a635d"
                   strokeWidth="3"
-                  strokeDasharray="0, 100"
+                  strokeDasharray={`${last7DaysPct}, 100`}
+                  strokeLinecap="round"
                 />
               </svg>
-              <span className="absolute font-display text-2xl font-bold text-primary">
-                0%
+              <span className="absolute inset-0 flex items-center justify-center font-display text-xl sm:text-2xl font-bold text-primary leading-none">
+                {last7DaysPct}%
               </span>
             </div>
-            <div className="flex-grow space-y-4">
-              {DASHBOARD_WEEKLY_COURSES.map((course) => (
-                <div key={course.name}>
-                  <div className="flex justify-between font-label text-[10px] mb-1">
-                    <span>{course.name}</span>
-                    <span>
-                      {course.present}/{course.total} Classes
-                    </span>
-                  </div>
-                  <div className="h-2 bg-surface hand-drawn-border overflow-hidden">
+
+            <div className="flex flex-col flex-1 min-w-0 min-h-0 justify-center gap-2">
+              <p className="font-label text-[10px] text-on-surface-variant uppercase tracking-wide shrink-0">
+                Upcoming classes
+              </p>
+              <div className="flex flex-col gap-1.5 min-w-0 overflow-y-auto max-h-[9.5rem] sm:max-h-none">
+                {upcomingClasses.length === 0 ? (
+                  <p className="font-body text-xs sm:text-sm text-on-surface-variant leading-snug">
+                    No upcoming classes scheduled.{" "}
+                    <Link to="/ledger" className="text-primary underline underline-offset-2">
+                      View attendance
+                    </Link>
+                  </p>
+                ) : (
+                  upcomingClasses.map(({ subject, session }) => (
                     <div
-                      className="h-full bg-primary-container sketch-bar"
-                      style={{ width: `${(course.present / course.total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+                      key={session.id}
+                      className="flex items-center gap-2 px-2.5 py-2 bg-surface-bright hand-drawn-border min-w-0"
+                    >
+                      <span className="material-symbols-outlined text-primary text-base shrink-0">
+                        {subject.icon}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-label text-[11px] leading-tight truncate">{subject.name}</p>
+                        <p className="font-label text-[9px] text-on-surface-variant mt-0.5 truncate">
+                          {formatSessionDateTime(session.date, session.time)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

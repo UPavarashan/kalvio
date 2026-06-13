@@ -449,6 +449,46 @@ export function getPendingSessions(subjects: LedgerSubject[]) {
     });
 }
 
+export function getSessionDateTime(
+  session: ClassSession,
+  subject: LedgerSubject
+): Date | null {
+  const date = resolveSessionDate(session, subject);
+  if (!date) return null;
+
+  const [hours, minutes] = session.time.split(":").map(Number);
+  const sessionAt = new Date(date);
+  sessionAt.setHours(hours ?? 0, minutes ?? 0, 0, 0);
+  return sessionAt;
+}
+
+export function getUpcomingSessions(subjects: LedgerSubject[], limit = 3) {
+  const now = new Date();
+
+  return subjects
+    .filter((subject) => isSubjectStarted(subject))
+    .flatMap((subject) =>
+      subject.sessions
+        .filter((session) => {
+          if (session.status !== "scheduled") return false;
+          if (!isSessionWithinSubjectTerm(session, subject)) return false;
+          const sessionAt = getSessionDateTime(session, subject);
+          return sessionAt !== null && sessionAt > now;
+        })
+        .map((session) => ({
+          subject,
+          session,
+          at: getSessionDateTime(session, subject)!,
+        }))
+    )
+    .sort((a, b) => {
+      const byTime = a.at.getTime() - b.at.getTime();
+      if (byTime !== 0) return byTime;
+      return a.subject.name.localeCompare(b.subject.name);
+    })
+    .slice(0, limit);
+}
+
 export function appendTodayScheduledSessions(subject: LedgerSubject): LedgerSubject {
   if (subject.schedules.length === 0 || !isSubjectStarted(subject)) return subject;
 

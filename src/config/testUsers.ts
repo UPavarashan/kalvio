@@ -29,6 +29,20 @@ export const TEST_USERS: TestUser[] = [
     name: "Test User Three",
     program: "Information Technology",
   },
+  {
+    id: "test4",
+    username: "test4",
+    password: "test123",
+    name: "Test User Four",
+    program: "Software Engineering",
+  },
+  {
+    id: "test5",
+    username: "test5",
+    password: "test123",
+    name: "Test User Five",
+    program: "Data Science",
+  },
 ];
 
 export function findTestUser(username: string, password: string): TestUser | null {

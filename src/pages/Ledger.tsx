@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import {
-  ACADEMIC_YEARS,
   LEDGER_SEMESTERS,
   type LedgerSemester,
 } from "../data/mockData";
@@ -30,11 +29,11 @@ import {
   isSessionToday,
   legacySubjectsToLedger,
 } from "../utils/ledger";
-import { loadSem2Attendance, saveSem2Attendance } from "../utils/ledgerStorage";
+import { loadAttendanceStore, saveAttendanceStore, saveAttendanceSelection, DEFAULT_ATTENDANCE_YEAR } from "../utils/ledgerStorage";
 import { inputClass, selectClass } from "../utils/formClasses";
 import { useAuth } from "../context/AuthContext";
 
-const CURRENT_YEAR = "2023/24";
+const CURRENT_YEAR = DEFAULT_ATTENDANCE_YEAR;
 const CURRENT_TERM = 2;
 
 interface Term2State {
@@ -51,30 +50,62 @@ export default function Ledger() {
   const { registerActions } = useLedgerUI();
   const confirmRef = useRef<HTMLElement>(null);
   const [academicYear, setAcademicYear] = useState(CURRENT_YEAR);
-  const [customYears, setCustomYears] = useState<string[]>([]);
+  const [years, setYears] = useState<string[]>([CURRENT_YEAR]);
   const [showYearInput, setShowYearInput] = useState(false);
   const [newYearInput, setNewYearInput] = useState("");
   const [activeTerm, setActiveTerm] = useState<1 | 2>(CURRENT_TERM);
   const [controlsExpanded, setControlsExpanded] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [term2ByYear, setTerm2ByYear] = useState<Record<string, Term2State>>(() => ({
     [CURRENT_YEAR]: emptyTerm2State(),
   }));
 
+  const loadedForUser = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!user) return;
-    const subjects = loadSem2Attendance(user.id).map(ensureSubjectSessions);
-    setTerm2ByYear({
-      [CURRENT_YEAR]: {
-        ledgerSubjects: subjects,
-        log: buildLogFromSubjects(subjects),
-      },
-    });
+    if (!user) {
+      loadedForUser.current = null;
+      setHydrated(false);
+      return;
+    }
+    if (loadedForUser.current === user.id) return;
+    loadedForUser.current = user.id;
+
+    const store = loadAttendanceStore(user.id);
+    const nextTerm2ByYear = Object.fromEntries(
+      store.years.map((year) => {
+        const subjects = store.byYear[year] ?? [];
+        return [
+          year,
+          {
+            ledgerSubjects: subjects,
+            log: buildLogFromSubjects(subjects),
+          },
+        ];
+      })
+    );
+    setYears(store.years);
+    setTerm2ByYear(nextTerm2ByYear);
+    setAcademicYear(
+      store.selectedYear && store.years.includes(store.selectedYear)
+        ? store.selectedYear
+        : store.years[0] ?? CURRENT_YEAR
+    );
+    setActiveTerm(store.selectedTerm === 1 ? 1 : 2);
+    setHydrated(true);
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user) return;
-    saveSem2Attendance(user.id, term2ByYear[CURRENT_YEAR]?.ledgerSubjects ?? []);
-  }, [term2ByYear, user?.id]);
+    if (!user || !hydrated) return;
+    saveAttendanceStore(user.id, {
+      years,
+      byYear: Object.fromEntries(
+        years.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
+      ),
+      selectedYear: academicYear,
+      selectedTerm: activeTerm,
+    });
+  }, [years, term2ByYear, academicYear, activeTerm, user?.id, hydrated]);
 
   const [modal, setModal] = useState<
     | { type: "addSubject" }
@@ -84,10 +115,7 @@ export default function Ledger() {
     | null
   >(null);
 
-  const allYears = useMemo(
-    () => [...new Set([...ACADEMIC_YEARS, ...customYears])].sort(),
-    [customYears]
-  );
+  const allYears = useMemo(() => [...years].sort(), [years]);
   const isEditable = activeTerm === 2;
 
   const updateTerm2 = (year: string, updater: (prev: Term2State) => Term2State) => {
@@ -102,17 +130,27 @@ export default function Ledger() {
       const sem = LEDGER_SEMESTERS.find(
         (s) => s.academicYear === academicYear && s.term === 1
       );
-      if (!sem) return null;
-      const subjects = legacySubjectsToLedger(sem.subjects);
+      if (sem) {
+        const subjects = legacySubjectsToLedger(sem.subjects);
+        return {
+          academicYear: sem.academicYear,
+          term: sem.term,
+          ledgerSubjects: subjects,
+          log: buildLogFromSubjects(subjects),
+          calendarDays: sem.calendarDays,
+          calendarMonth: sem.calendarMonth,
+        };
+      }
       return {
-        academicYear: sem.academicYear,
-        term: sem.term,
-        ledgerSubjects: subjects,
-        log: buildLogFromSubjects(subjects),
-        calendarDays: sem.calendarDays,
-        calendarMonth: sem.calendarMonth,
+        academicYear,
+        term: 1 as const,
+        ledgerSubjects: [],
+        log: [],
+        calendarDays: [] as LedgerSemester["calendarDays"],
+        calendarMonth: "",
       };
     }
+
     const t2 = term2ByYear[academicYear] ?? emptyTerm2State();
     return {
       academicYear,
@@ -124,10 +162,10 @@ export default function Ledger() {
     };
   }, [activeTerm, academicYear, term2ByYear]);
 
-  const stats = useMemo(() => {
-    if (!displayedData) return null;
-    return computeOverallStats(displayedData.ledgerSubjects);
-  }, [displayedData]);
+  const stats = useMemo(
+    () => computeOverallStats(displayedData.ledgerSubjects),
+    [displayedData]
+  );
 
   const pendingSessions = useMemo(() => {
     if (!isEditable || activeTerm !== 2) return [];
@@ -219,6 +257,14 @@ export default function Ledger() {
     });
   };
 
+  const persistSelection = useCallback(
+    (year: string, term: 1 | 2) => {
+      if (!user) return;
+      saveAttendanceSelection(user.id, year, term);
+    },
+    [user]
+  );
+
   const controlsProps = {
     expanded: controlsExpanded,
     summary: controlsSummary,
@@ -234,6 +280,7 @@ export default function Ledger() {
         setShowYearInput(false);
         setNewYearInput("");
         setAcademicYear(y);
+        persistSelection(y, activeTerm);
       }
     },
     onCancelAddYear: () => {
@@ -243,41 +290,71 @@ export default function Ledger() {
     onAddYear: () => {
       const t = newYearInput.trim();
       if (!t || allYears.includes(t)) return;
-      setCustomYears((p) => [...p, t]);
+      setYears((prev) => [...prev, t].sort());
       setAcademicYear(t);
       setNewYearInput("");
       setShowYearInput(false);
       setActiveTerm(2);
+      setControlsExpanded(false);
       setTerm2ByYear((p) => ({ ...p, [t]: p[t] ?? emptyTerm2State() }));
+      persistSelection(t, 2);
     },
-    onNewYearInputChange: setNewYearInput,
-    onTermChange: setActiveTerm,
-  };
+    onDeleteYear: () => {
+      if (allYears.length <= 1) {
+        window.alert("Keep at least one academic year. Add another year first, then you can delete this one.");
+        return;
+      }
+      const confirmed = window.confirm(
+        `Delete ${academicYear} and all its attendance data? This cannot be undone.`
+      );
+      if (!confirmed) return;
 
-  if (!displayedData || !stats) {
-    return (
-      <div className="flex flex-col gap-5 sm:gap-8 pb-8 sm:pb-16 w-full">
-        <Header
-          semLabel={`${academicYear} — Sem ${activeTerm}`}
-          pendingItems={pendingSessions.map(({ subject, session }) => ({
-            subjectId: subject.id,
-            subjectName: subject.name,
-            icon: subject.icon,
-            date: session.date,
-            time: session.time,
-          }))}
-          onPendingClick={scrollToConfirm}
-          controls={<LedgerControls {...controlsProps} />}
-        />
-        <p className="font-body text-on-surface-variant">No data for {academicYear} — Sem 1 yet.</p>
-      </div>
-    );
-  }
+      const remaining = allYears.filter((year) => year !== academicYear);
+      const nextYear = remaining[0] ?? CURRENT_YEAR;
+
+      setYears(remaining);
+      setTerm2ByYear((prev) => {
+        const next = { ...prev };
+        delete next[academicYear];
+        return next;
+      });
+      setAcademicYear(nextYear);
+      setActiveTerm(2);
+      setShowYearInput(false);
+      setNewYearInput("");
+
+      if (user) {
+        const nextByYear = Object.fromEntries(
+          remaining.map((year) => [year, term2ByYear[year]?.ledgerSubjects ?? []])
+        );
+        saveAttendanceStore(user.id, {
+          years: remaining,
+          byYear: nextByYear,
+          selectedYear: nextYear,
+          selectedTerm: 2,
+        });
+      }
+    },
+    canDeleteYear: allYears.length > 1,
+    onNewYearInputChange: setNewYearInput,
+    onTermChange: (term: 1 | 2) => {
+      setActiveTerm(term);
+      persistSelection(academicYear, term);
+    },
+  };
 
   const editSubject =
     modal?.type === "editSubject"
       ? displayedData.ledgerSubjects.find((s) => s.id === modal.subjectId)
       : null;
+
+  if (!hydrated) {
+    return (
+      <div className="flex flex-col gap-5 pb-8 sm:pb-16 w-full">
+        <p className="font-body text-on-surface-variant">Loading attendance…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5 sm:gap-8 pb-8 sm:pb-16 w-full">
@@ -435,33 +512,28 @@ export default function Ledger() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full items-stretch">
-        <div className="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-surface-container w-full min-w-0">
-          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-            <h3 className="font-headline text-xl font-medium text-primary">
-              Subject Breakdown
-              <span className="ml-2 font-label text-[10px] text-on-surface-variant">
-                ({displayedData.ledgerSubjects.length} subjects)
-              </span>
-            </h3>
+        <div className="lg:col-span-2 paper-texture hand-drawn-border charcoal-shadow p-4 bg-surface-container w-full min-w-0 flex flex-col min-h-full">
+          <div className="flex justify-between items-start gap-2 mb-1 shrink-0">
+            <h3 className="font-headline text-lg font-medium text-primary">Subject Breakdown</h3>
             {isEditable && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setModal({ type: "addSubject" })}
-                  className="flex items-center gap-1 px-3 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow"
-                >
-                  <span className="material-symbols-outlined text-sm">add</span>
-                  Add Subject
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setModal({ type: "addSubject" })}
+                className="flex items-center gap-1 px-3 py-1.5 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow shrink-0"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                Add Subject
+              </button>
             )}
           </div>
+          <p className="font-label text-[9px] text-on-surface-variant mb-2 shrink-0">
+            {displayedData.ledgerSubjects.length} subjects
+            {displayedData.ledgerSubjects.length === 0 &&
+              isEditable &&
+              " · Add a subject to schedule your classes"}
+          </p>
 
-          {displayedData.ledgerSubjects.length === 0 ? (
-            <p className="font-body text-on-surface-variant">
-              No subjects yet. {isEditable && "Add a subject to schedule your classes."}
-            </p>
-          ) : (
+          {displayedData.ledgerSubjects.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {displayedData.ledgerSubjects.map((subject) => {
                 const subStats = computeSubjectStats(subject);
@@ -877,6 +949,8 @@ interface LedgerControlsProps {
   onYearChange: (year: string) => void;
   onCancelAddYear: () => void;
   onAddYear: () => void;
+  onDeleteYear: () => void;
+  canDeleteYear: boolean;
   onNewYearInputChange: (value: string) => void;
   onTermChange: (term: 1 | 2) => void;
 }
@@ -893,6 +967,8 @@ function LedgerControls({
   onYearChange,
   onCancelAddYear,
   onAddYear,
+  onDeleteYear,
+  canDeleteYear,
   onNewYearInputChange,
   onTermChange,
 }: LedgerControlsProps) {
@@ -914,12 +990,10 @@ function LedgerControls({
       <button
         type="button"
         onClick={onToggle}
-        className="paper-texture hand-drawn-border charcoal-shadow bg-surface-container flex items-center justify-between gap-2 px-2.5 sm:px-3 py-1.5 hover:bg-surface-container-high transition-colors text-left whitespace-nowrap min-h-[2.75rem]"
+        className="flex items-center justify-center gap-1.5 min-w-[2.75rem] min-h-[2.75rem] sm:min-w-0 sm:min-h-0 px-2.5 sm:px-4 py-2 border border-primary text-primary hand-drawn-border font-label text-xs hover:bg-primary-fixed transition-colors shrink-0 whitespace-nowrap"
       >
-        <span className="font-label text-[10px] text-on-surface truncate">
-          {summary}
-        </span>
-        <span className="material-symbols-outlined text-primary text-base shrink-0">
+        <span className="truncate">{summary}</span>
+        <span className="material-symbols-outlined text-sm shrink-0">
           {expanded ? "expand_less" : "expand_more"}
         </span>
       </button>
@@ -932,18 +1006,39 @@ function LedgerControls({
               <label className="font-label text-[10px] text-on-surface-variant block mb-1">
                 Academic Year
               </label>
-              <select
-                value={showYearInput ? "__add__" : academicYear}
-                onChange={(e) => onYearChange(e.target.value)}
-                className={selectClass}
-              >
-                {allYears.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-                <option value="__add__">+ Add academic year...</option>
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={showYearInput ? "__add__" : academicYear}
+                  onChange={(e) => onYearChange(e.target.value)}
+                  className={`flex-1 min-w-0 ${selectClass}`}
+                >
+                  {allYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                  <option value="__add__">+ Add academic year...</option>
+                </select>
+                {!showYearInput && (
+                  <button
+                    type="button"
+                    onClick={onDeleteYear}
+                    aria-label={`Delete ${academicYear}`}
+                    title={
+                      canDeleteYear
+                        ? `Delete ${academicYear}`
+                        : "Add another year first to delete this one"
+                    }
+                    className={`shrink-0 px-2.5 py-2 hand-drawn-border font-label text-xs transition-colors ${
+                      canDeleteYear
+                        ? "border border-error text-error hover:bg-error-container"
+                        : "border border-outline-variant text-on-surface-variant opacity-60"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm leading-none">delete</span>
+                  </button>
+                )}
+              </div>
               {showYearInput && (
                 <div className="flex gap-2 mt-2">
                   <input
