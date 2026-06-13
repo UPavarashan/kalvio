@@ -166,7 +166,7 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
 
         <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 pt-3 sm:pt-4">
           <div className="overflow-x-auto -mx-1 px-1">
-          <div className="grid grid-cols-7 gap-px bg-outline-variant/40 border border-outline-variant hand-drawn-border overflow-hidden min-w-[280px]">
+          <div className="grid grid-cols-7 gap-px bg-outline-variant/40 border border-outline-variant hand-drawn-border overflow-hidden min-w-[280px] [&>*]:min-w-0">
             {WEEKDAYS.map((day) => (
               <div
                 key={day}
@@ -187,12 +187,12 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
                   key={cellDate.toISOString()}
                   type="button"
                   onClick={() => setSelectedDay(cellDate)}
-                  className={`min-h-[4rem] sm:min-h-[5.5rem] p-1 sm:p-1.5 text-left bg-surface-container transition-colors hover:bg-surface-container-high flex flex-col gap-0.5 sm:gap-1 ${
+                  className={`min-h-[4rem] sm:min-h-[5.5rem] p-1 sm:p-1.5 text-left bg-surface-container transition-colors hover:bg-surface-container-high flex flex-col gap-0.5 sm:gap-1 overflow-hidden min-w-0 ${
                     !inCurrentMonth ? "opacity-45" : ""
                   } ${isSelected ? "ring-2 ring-inset ring-primary" : ""}`}
                 >
                   <span
-                    className={`inline-flex items-center justify-center w-6 h-6 font-label text-[11px] shrink-0 ${
+                    className={`inline-flex items-center justify-center w-6 h-6 font-label text-[11px] shrink-0 self-start ${
                       isToday
                         ? "rounded-full bg-primary text-on-primary font-bold"
                         : inCurrentMonth
@@ -203,14 +203,17 @@ export function LedgerCalendarModal({ subjects, onClose }: LedgerCalendarModalPr
                     {cellDate.getDate()}
                   </span>
 
-                  <div className="space-y-0.5 overflow-hidden flex-1">
+                  <div className="min-w-0 w-full overflow-hidden flex-1 flex flex-col gap-0.5">
                     {daySessions.slice(0, 3).map(({ subject, session }) => (
                       <div
                         key={session.id}
-                        className={`truncate px-1 py-px font-label text-[9px] sm:text-[8px] border ${sessionStatusStyles(session.status)}`}
+                        className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-1 py-px font-label text-[9px] sm:text-[8px] border ${sessionStatusStyles(session.status)}`}
                         title={`${subject.name} · ${formatTimeShort(session.time)} · ${session.status}`}
                       >
-                        {formatTimeShort(session.time)} {subject.name}
+                        <span className="sm:hidden">{formatTimeShort(session.time)}</span>
+                        <span className="hidden sm:block min-w-0 truncate">
+                          {formatTimeShort(session.time)} {subject.name}
+                        </span>
                       </div>
                     ))}
                     {daySessions.length > 3 && (

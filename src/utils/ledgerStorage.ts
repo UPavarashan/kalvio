@@ -1,7 +1,13 @@
 import type { LedgerSubject } from "../types/ledger";
-import { createDefaultSem2Subjects, ensureSubjectSessions } from "./ledger";
+import { ensureSubjectSessions } from "./ledger";
 import { requireSupabase } from "./supabaseClient";
 
+/** Default year label for new users (e.g. "2026") */
+export function getDefaultAttendanceYear(): string {
+  return String(new Date().getFullYear());
+}
+
+/** @deprecated Use getDefaultAttendanceYear() — kept for existing saved data */
 export const DEFAULT_ATTENDANCE_YEAR = "2023/24";
 
 export interface AttendanceStore {
@@ -11,18 +17,19 @@ export interface AttendanceStore {
   selectedTerm?: 1 | 2;
 }
 
-
-function defaultStore(): AttendanceStore {
-  const subjects = createDefaultSem2Subjects().map(ensureSubjectSessions);
+function emptyStore(): AttendanceStore {
+  const year = getDefaultAttendanceYear();
   return {
-    years: [DEFAULT_ATTENDANCE_YEAR],
-    byYear: { [DEFAULT_ATTENDANCE_YEAR]: subjects },
+    years: [year],
+    byYear: { [year]: [] },
+    selectedYear: year,
+    selectedTerm: 2,
   };
 }
 
 function normalizeStore(raw: AttendanceStore): AttendanceStore {
   if (!Array.isArray(raw.years) || raw.years.length === 0 || !raw.byYear) {
-    return defaultStore();
+    return emptyStore();
   }
 
   const byYear: Record<string, LedgerSubject[]> = {};
@@ -53,7 +60,7 @@ export async function loadAttendanceStore(userId: string): Promise<AttendanceSto
     if (store.years.length > 0) return store;
   }
 
-  const seeded = defaultStore();
+  const seeded = emptyStore();
   await saveAttendanceStore(userId, seeded);
   return seeded;
 }

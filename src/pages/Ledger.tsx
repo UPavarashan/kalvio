@@ -29,11 +29,11 @@ import {
   isSessionToday,
   legacySubjectsToLedger,
 } from "../utils/ledger";
-import { loadAttendanceStore, saveAttendanceStore, saveAttendanceSelection, DEFAULT_ATTENDANCE_YEAR } from "../utils/ledgerStorage";
+import { loadAttendanceStore, saveAttendanceStore, saveAttendanceSelection, getDefaultAttendanceYear } from "../utils/ledgerStorage";
 import { inputClass, selectClass } from "../utils/formClasses";
 import { useAuth } from "../context/AuthContext";
 
-const CURRENT_YEAR = DEFAULT_ATTENDANCE_YEAR;
+const CURRENT_YEAR = getDefaultAttendanceYear();
 const CURRENT_TERM = 2;
 
 interface Term2State {
@@ -1063,7 +1063,7 @@ function LedgerControls({
                     type="text"
                     value={newYearInput}
                     onChange={(e) => onNewYearInputChange(e.target.value)}
-                    placeholder="e.g. 2026/27"
+                    placeholder="e.g. 2026"
                     className={`flex-1 ${inputClass}`}
                   />
                   <button

@@ -2,7 +2,7 @@ import type { LedgerSemester } from "../data/mockData";
 import type { LedgerSubject } from "../types/ledger";
 import { ensureSubjectSessions, legacySubjectsToLedger } from "./ledger";
 import {
-  DEFAULT_ATTENDANCE_YEAR,
+  getDefaultAttendanceYear,
   type AttendanceStore,
 } from "./ledgerStorage";
 
@@ -19,9 +19,7 @@ export function getAttendanceSelection(
   const academicYear =
     store.selectedYear && store.years.includes(store.selectedYear)
       ? store.selectedYear
-      : store.years.includes(DEFAULT_ATTENDANCE_YEAR)
-        ? DEFAULT_ATTENDANCE_YEAR
-        : store.years[0] ?? DEFAULT_ATTENDANCE_YEAR;
+      : store.years[0] ?? getDefaultAttendanceYear();
   const term: 1 | 2 = store.selectedTerm === 1 ? 1 : 2;
 
   if (term === 1) {

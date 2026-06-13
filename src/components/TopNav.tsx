@@ -23,12 +23,19 @@ export default function TopNav() {
               </span>
             </Link>
 
-            <div className="relative z-10 flex items-center gap-1.5 sm:gap-2 shrink-0 pointer-events-auto sm:flex-1 sm:justify-end">
-              <div
-                className="hidden md:flex w-8 h-8 rounded-full bg-primary-container items-center justify-center text-on-primary-container border border-primary/30"
-                title={user?.name}
-              >
-                <span className="material-symbols-outlined text-sm">person</span>
+            <div className="relative z-10 flex items-center gap-1.5 sm:gap-2 shrink-0 pointer-events-auto sm:flex-1 sm:justify-end min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <div
+                  className="flex w-8 h-8 rounded-full bg-primary-container items-center justify-center text-on-primary-container border border-primary/30 shrink-0"
+                  title={user?.name || user?.email}
+                >
+                  <span className="material-symbols-outlined text-sm">person</span>
+                </div>
+                {user?.name ? (
+                  <span className="font-label text-[10px] sm:text-[11px] text-on-surface truncate max-w-[5.5rem] sm:max-w-[10rem]">
+                    {user.name}
+                  </span>
+                ) : null}
               </div>
               <button
                 type="button"
