@@ -17,6 +17,17 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function formatAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("signups are disabled") || lower.includes("signup is disabled")) {
+    return "Sign ups are disabled in Supabase. Enable Email provider and turn on “Allow new users to sign up” under Authentication → Providers → Email.";
+  }
+  if (lower.includes("email provider") && lower.includes("disabled")) {
+    return "Email login is disabled in Supabase. Turn on the Email provider under Authentication → Providers → Email.";
+  }
+  return message;
+}
+
 async function fetchProfile(userId: string): Promise<AppUser | null> {
   const { data, error } = await requireSupabase()
     .from("profiles")
@@ -80,10 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      const message =
+      const message = formatAuthError(
         error.message.toLowerCase().includes("email not confirmed")
           ? "This account was created before email confirmation was turned off. Delete it in Supabase and sign up again, or ask Pavarashan to confirm it manually."
-          : error.message;
+          : error.message
+      );
       return { ok: false as const, message };
     }
     return { ok: true as const };
@@ -103,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        return { ok: false as const, message: error.message };
+        return { ok: false as const, message: formatAuthError(error.message) };
       }
 
       if (data.user?.identities?.length === 0) {
