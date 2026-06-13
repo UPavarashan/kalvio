@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { supabase } from "../utils/supabaseClient";
+import { requireSupabase } from "../utils/supabaseClient";
 import type { AppUser } from "../types/user";
 
 interface AuthContextValue {
@@ -18,7 +18,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchProfile(userId: string): Promise<AppUser | null> {
-  const { data, error } = await supabase
+  const { data, error } = await requireSupabase()
     .from("profiles")
     .select("id, email, name, course")
     .eq("id", userId)
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     async function initSession() {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await requireSupabase().auth.getSession();
       if (!mounted) return;
 
       if (data.session?.user) {
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = requireSupabase().auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
       if (session?.user) {
         const profile = await fetchProfile(session.user.id);
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await requireSupabase().auth.signInWithPassword({
       email: email.trim(),
       password,
     });
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string, name: string, course: string) => {
-      const { error } = await supabase.auth.signUp({
+      const { error } = await requireSupabase().auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    await requireSupabase().auth.signOut();
     setUser(null);
   }, []);
 

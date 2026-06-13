@@ -1,7 +1,7 @@
 import type { Module } from "../data/mockData";
 import { GPA_SEMESTERS } from "../data/mockData";
 import { DEFAULT_GRADE_POINTS } from "./grades";
-import { supabase } from "./supabaseClient";
+import { requireSupabase } from "./supabaseClient";
 
 function emptyModulesBySemester(): Record<string, Module[]> {
   return Object.fromEntries(GPA_SEMESTERS.map((sem) => [sem.id, []]));
@@ -31,7 +31,7 @@ function normalizeGpaData(raw: Partial<GpaData> | null): GpaData {
 }
 
 export async function loadGpaData(userId: string): Promise<GpaData> {
-  const { data, error } = await supabase
+  const { data, error } = await requireSupabase()
     .from("user_gpa")
     .select("modules_by_semester, selected_semester_id, grade_scale")
     .eq("user_id", userId)
@@ -53,7 +53,7 @@ export async function loadGpaData(userId: string): Promise<GpaData> {
 }
 
 export async function saveGpaData(userId: string, data: GpaData): Promise<void> {
-  const { error } = await supabase.from("user_gpa").upsert(
+  const { error } = await requireSupabase().from("user_gpa").upsert(
     {
       user_id: userId,
       modules_by_semester: data.modulesBySemester,

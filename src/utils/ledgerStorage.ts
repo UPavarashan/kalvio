@@ -1,6 +1,6 @@
 import type { LedgerSubject } from "../types/ledger";
 import { createDefaultSem2Subjects, ensureSubjectSessions } from "./ledger";
-import { supabase } from "./supabaseClient";
+import { requireSupabase } from "./supabaseClient";
 
 export const DEFAULT_ATTENDANCE_YEAR = "2023/24";
 
@@ -40,7 +40,7 @@ function normalizeStore(raw: AttendanceStore): AttendanceStore {
 }
 
 export async function loadAttendanceStore(userId: string): Promise<AttendanceStore> {
-  const { data, error } = await supabase
+  const { data, error } = await requireSupabase()
     .from("user_attendance")
     .select("store")
     .eq("user_id", userId)
@@ -62,7 +62,7 @@ export async function saveAttendanceStore(
   userId: string,
   store: AttendanceStore
 ): Promise<void> {
-  const { error } = await supabase.from("user_attendance").upsert(
+  const { error } = await requireSupabase().from("user_attendance").upsert(
     {
       user_id: userId,
       store,
