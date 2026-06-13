@@ -12,11 +12,33 @@ interface AuthContextValue {
     password: string,
     name: string,
     course: string
-  ) => Promise<{ ok: true } | { ok: false; message: string }>;
+  ) => Promise<{ ok: true; needsConfirmation: boolean } | { ok: false; message: string }>;
+  resendConfirmation: (email: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function formatAuthError(message: string, status?: number): string {
+  const lower = message.toLowerCase();
+  if (status === 429 || lower.includes("rate limit")) {
+    return "Email rate limit reached. Supabase's built-in email only allows a few messages per hour. Wait and try again, or set up custom SMTP in Supabase.";
+  }
+  if (lower.includes("redirect") || lower.includes("invalid")) {
+    return `${message} Add https://www.kalvio.org to Supabase → Authentication → URL Configuration → Redirect URLs.`;
+  }
+  return message;
+}
+
+function signUpOptions(name: string, course: string) {
+  return {
+    emailRedirectTo: getEmailRedirectUrl(),
+    data: {
+      name: name.trim(),
+      course: course.trim(),
+    },
+  };
+}
 
 async function fetchProfile(userId: string): Promise<AppUser | null> {
   const { data, error } = await requireSupabase()
@@ -88,25 +110,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string, name: string, course: string) => {
-      const { error } = await requireSupabase().auth.signUp({
+      const { data, error } = await requireSupabase().auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          emailRedirectTo: getEmailRedirectUrl(),
-          data: {
-            name: name.trim(),
-            course: course.trim(),
-          },
-        },
+        options: signUpOptions(name, course),
       });
 
       if (error) {
-        return { ok: false as const, message: error.message };
+        return { ok: false as const, message: formatAuthError(error.message, error.status) };
       }
-      return { ok: true as const };
+
+      if (data.user?.identities?.length === 0) {
+        return {
+          ok: false as const,
+          message:
+            "This email is already registered. Try signing in, or use Resend confirmation below.",
+        };
+      }
+
+      return {
+        ok: true as const,
+        needsConfirmation: !data.session,
+      };
     },
     []
   );
+
+  const resendConfirmation = useCallback(async (email: string) => {
+    const { error } = await requireSupabase().auth.resend({
+      type: "signup",
+      email: email.trim(),
+      options: {
+        emailRedirectTo: getEmailRedirectUrl(),
+      },
+    });
+
+    if (error) {
+      return { ok: false as const, message: formatAuthError(error.message, error.status) };
+    }
+    return { ok: true as const };
+  }, []);
 
   const logout = useCallback(async () => {
     await requireSupabase().auth.signOut();
@@ -114,8 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isReady, login, signUp, logout }),
-    [user, isReady, login, signUp, logout]
+    () => ({ user, isReady, login, signUp, resendConfirmation, logout }),
+    [user, isReady, login, signUp, resendConfirmation, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

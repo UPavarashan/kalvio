@@ -8,6 +8,7 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
+        flowType: "pkce",
         detectSessionInUrl: true,
         persistSession: true,
         autoRefreshToken: true,

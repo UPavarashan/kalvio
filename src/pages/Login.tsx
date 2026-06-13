@@ -6,7 +6,7 @@ import { inputClass } from "../utils/formClasses";
 type AuthMode = "signin" | "signup";
 
 export default function Login() {
-  const { login, signUp } = useAuth();
+  const { login, signUp, resendConfirmation } = useAuth();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +15,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -59,11 +60,33 @@ export default function Login() {
         return;
       }
 
-      setInfo("Account created. Check your email to confirm, then sign in.");
+      setInfo("Account created. Check your email to confirm, then sign in. If nothing arrives in a few minutes, check spam or use Resend confirmation below.");
       setMode("signin");
       setPassword("");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email.trim()) {
+      setError("Enter your email above first, then resend confirmation.");
+      return;
+    }
+
+    setError("");
+    setInfo("");
+    setResending(true);
+
+    try {
+      const result = await resendConfirmation(email);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setInfo("Confirmation email sent again. Check your inbox and spam folder.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -222,6 +245,17 @@ export default function Login() {
           >
             {submitting ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
+
+          {mode === "signin" && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending || !email.trim()}
+              className="w-full px-4 py-2 text-on-surface-variant hand-drawn-border font-label text-[10px] hover:bg-surface-container-high transition-colors disabled:opacity-60"
+            >
+              {resending ? "Sending…" : "Resend confirmation email"}
+            </button>
+          )}
         </form>
       </div>
     </div>
