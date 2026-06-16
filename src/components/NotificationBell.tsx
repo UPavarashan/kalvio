@@ -41,7 +41,14 @@ export default function NotificationBell({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-1.5rem))] paper-texture hand-drawn-border charcoal-shadow bg-surface-container p-3 z-50">
+        <>
+          <button
+            type="button"
+            aria-label="Close notifications"
+            className="fixed inset-0 z-40 bg-inverse-surface/20 sm:hidden"
+            onClick={() => setOpen(false)}
+          />
+          <div className="fixed z-50 left-3 right-3 bottom-[max(1rem,env(safe-area-inset-bottom))] sm:absolute sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-2 w-auto sm:w-[min(18rem,calc(100vw-1.5rem))] paper-texture hand-drawn-border charcoal-shadow bg-surface-container p-3 max-h-[50dvh] overflow-y-auto">
           <p className="font-label text-[10px] text-on-surface-variant mb-2">
             Needs confirmation
           </p>
@@ -72,6 +79,7 @@ export default function NotificationBell({
             </p>
           )}
         </div>
+        </>
       )}
     </div>
   );

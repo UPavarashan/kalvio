@@ -3,6 +3,7 @@ import type { ClassSession, LedgerSubject, ScheduleSlot } from "../../types/ledg
 import {
   DAYS_OF_WEEK,
   DEFAULT_PASS_PERCENTAGE,
+  DEFAULT_SLOT_SESSION_COUNT,
   dayLabel,
   formatScheduleSummary,
   sessionStatusToLogStatus,
@@ -97,7 +98,7 @@ export function SubjectFormModal({
 
   return (
     <ModalOverlay onClose={isDirty ? undefined : onClose}>
-      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-lg">
+      <div className="paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-4 sm:p-6 w-full max-w-lg sm:max-w-xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-headline text-xl font-medium text-primary">
             {mode === "add" ? "Add Subject" : "Edit Subject"}
@@ -116,7 +117,7 @@ export function SubjectFormModal({
           </FormField>
 
           <FormField label="Pass Percentage">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="number"
                 min={0}
@@ -135,49 +136,24 @@ export function SubjectFormModal({
           </FormField>
 
           <FormField label="Class Times">
-            <div className="space-y-2">
-              <div className="hidden sm:grid grid-cols-[1fr_1fr_28px] gap-2 font-label text-[10px] text-on-surface-variant">
-                <span>Day</span>
-                <span>Time</span>
-                <span />
-              </div>
+            <p className="font-label text-[10px] text-on-surface-variant mb-3 leading-snug">
+              Sessions = how many attendances each class time counts as (e.g. 4 for a 4-hour
+              block, or 1 at others).
+            </p>
+            <div className="space-y-3">
               {draft.schedules.map((slot) => (
-                <div
+                <ScheduleSlotRow
                   key={slot.id}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_28px] gap-2 items-center"
-                >
-                  <select
-                    value={slot.dayOfWeek}
-                    onChange={(e) => updateSchedule(slot.id, { dayOfWeek: e.target.value })}
-                    className={selectClass}
-                    aria-label="Day of week"
-                  >
-                    {DAYS_OF_WEEK.map((d) => (
-                      <option key={d} value={d}>
-                        {dayLabel(d)}
-                      </option>
-                    ))}
-                  </select>
-                  <TimeSelect
-                    value={slot.time}
-                    onChange={(time) => updateSchedule(slot.id, { time })}
-                    aria-label="Class time"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeSchedule(slot.id)}
-                    className="p-1 text-on-surface-variant hover:text-error justify-self-center"
-                    title="Remove time slot"
-                    disabled={draft.schedules.length <= 1}
-                  >
-                    <span className="material-symbols-outlined text-sm">close</span>
-                  </button>
-                </div>
+                  slot={slot}
+                  canRemove={draft.schedules.length > 1}
+                  onUpdate={(patch) => updateSchedule(slot.id, patch)}
+                  onRemove={() => removeSchedule(slot.id)}
+                />
               ))}
               <button
                 type="button"
                 onClick={addSchedule}
-                className="flex items-center gap-1 font-label text-[10px] text-primary hover:underline pt-1"
+                className="flex items-center gap-1.5 font-label text-[10px] text-primary hover:underline pt-0.5"
               >
                 <span className="material-symbols-outlined text-sm">add</span>
                 Add another time
@@ -470,6 +446,84 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
     <div>
       <label className="font-label text-[10px] text-on-surface-variant block mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function SlotField({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <span className="font-label text-[9px] text-on-surface-variant mb-1 block">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function ScheduleSlotRow({
+  slot,
+  canRemove,
+  onUpdate,
+  onRemove,
+}: {
+  slot: ScheduleSlot;
+  canRemove: boolean;
+  onUpdate: (patch: Partial<ScheduleSlot>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="relative p-3 sm:p-3.5 bg-surface-bright hand-drawn-border pr-11">
+      <button
+        type="button"
+        onClick={onRemove}
+        disabled={!canRemove}
+        title="Remove time slot"
+        aria-label="Remove time slot"
+        className="absolute top-2.5 right-2.5 flex items-center justify-center w-8 h-8 text-on-surface-variant hover:text-error hover:bg-surface-variant/80 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+      >
+        <span className="material-symbols-outlined text-[18px]">close</span>
+      </button>
+
+      <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_5.5rem] gap-3 items-end">
+        <SlotField label="Day">
+          <select
+            value={slot.dayOfWeek}
+            onChange={(e) => onUpdate({ dayOfWeek: e.target.value })}
+            className={selectClass}
+            aria-label="Day of week"
+          >
+            {DAYS_OF_WEEK.map((d) => (
+              <option key={d} value={d}>
+                {dayLabel(d)}
+              </option>
+            ))}
+          </select>
+        </SlotField>
+
+        <SlotField label="Time">
+          <TimeSelect
+            value={slot.time}
+            onChange={(time) => onUpdate({ time })}
+            aria-label="Class time"
+          />
+        </SlotField>
+
+        <SlotField label="Sessions" className="col-span-2 sm:col-span-1 max-w-[5.5rem] sm:max-w-none">
+          <input
+            type="number"
+            min={1}
+            max={12}
+            value={slot.sessionCount ?? DEFAULT_SLOT_SESSION_COUNT}
+            onChange={(e) =>
+              onUpdate({
+                sessionCount: Math.min(12, Math.max(1, Number(e.target.value) || 1)),
+              })
+            }
+            className={`${inputClass} w-full min-w-0 tabular-nums text-center sm:text-left`}
+            aria-label="Number of sessions"
+            title="Sessions counted for this class time"
+          />
+        </SlotField>
+      </div>
     </div>
   );
 }

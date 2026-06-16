@@ -6,7 +6,7 @@ import type {
   ScheduleSlot,
   SubjectStats,
 } from "../types/ledger";
-import { DAYS_OF_WEEK, sessionStatusToLogStatus, DEFAULT_PASS_PERCENTAGE, formatTimeShort } from "../types/ledger";
+import { DAYS_OF_WEEK, sessionStatusToLogStatus, DEFAULT_PASS_PERCENTAGE, formatTimeShort, DEFAULT_SLOT_SESSION_COUNT } from "../types/ledger";
 
 export function uid(): string {
   return crypto.randomUUID();
@@ -48,6 +48,49 @@ export function isWithinLastDays(dateStr: string, days: number): boolean {
 
 export function getPassPercentage(subject: LedgerSubject): number {
   return subject.passPercentage ?? DEFAULT_PASS_PERCENTAGE;
+}
+
+export function getSlotSessionCount(slot: ScheduleSlot): number {
+  const count = slot.sessionCount ?? DEFAULT_SLOT_SESSION_COUNT;
+  return Math.max(1, Math.min(12, count));
+}
+
+function findScheduleSlot(subject: LedgerSubject, session: ClassSession): ScheduleSlot | undefined {
+  if (session.scheduleSlotId) {
+    const byId = subject.schedules.find((s) => s.id === session.scheduleSlotId);
+    if (byId) return byId;
+  }
+  return subject.schedules.find((s) => s.time === session.time);
+}
+
+export function getSessionWeight(session: ClassSession, subject: LedgerSubject): number {
+  const slot = findScheduleSlot(subject, session);
+  return slot ? getSlotSessionCount(slot) : 1;
+}
+
+export function subjectUsesWeightedCounts(subject: LedgerSubject): boolean {
+  return subject.schedules.some((slot) => getSlotSessionCount(slot) !== 1);
+}
+
+export function getAttendanceCountLabel(subject: LedgerSubject): string {
+  return subjectUsesWeightedCounts(subject) ? "sessions" : "classes";
+}
+
+function rawSessionCount(
+  sessions: ClassSession[],
+  statuses: ClassSession["status"][]
+): number {
+  return sessions.filter((s) => statuses.includes(s.status)).length;
+}
+
+function weightedSessionCount(
+  sessions: ClassSession[],
+  subject: LedgerSubject,
+  statuses: ClassSession["status"][]
+): number {
+  return sessions
+    .filter((s) => statuses.includes(s.status))
+    .reduce((sum, s) => sum + getSessionWeight(s, subject), 0);
 }
 
 export function resolveSessionDate(
@@ -247,14 +290,20 @@ export function generateRecurringSessions(
 
 export function computeSubjectStats(subject: LedgerSubject): SubjectStats {
   const active = subject.sessions.filter((s) => s.status !== "cancelled");
-  const present = active.filter((s) => s.status === "present").length;
-  const absent = active.filter((s) => s.status === "absent").length;
-  const excused = active.filter((s) => s.status === "excused").length;
-  const scheduled = active.filter((s) => s.status === "scheduled").length;
-  const cancelled = subject.sessions.filter((s) => s.status === "cancelled").length;
-  const completed = present + absent + excused;
-  const attended = present + excused;
-  const percentage = completed > 0 ? Math.round((attended / completed) * 100) : 0;
+  const present = rawSessionCount(subject.sessions, ["present"]);
+  const absent = rawSessionCount(subject.sessions, ["absent"]);
+  const excused = rawSessionCount(subject.sessions, ["excused"]);
+  const scheduled = rawSessionCount(subject.sessions, ["scheduled"]);
+  const cancelled = rawSessionCount(subject.sessions, ["cancelled"]);
+  const attendedWeighted = weightedSessionCount(subject.sessions, subject, ["present", "excused"]);
+  const completedWeighted = weightedSessionCount(subject.sessions, subject, [
+    "present",
+    "absent",
+    "excused",
+  ]);
+  const percentage =
+    completedWeighted > 0 ? Math.round((attendedWeighted / completedWeighted) * 100) : 0;
+  const total = active.reduce((sum, s) => sum + getSessionWeight(s, subject), 0);
 
   return {
     present,
@@ -262,7 +311,7 @@ export function computeSubjectStats(subject: LedgerSubject): SubjectStats {
     excused,
     cancelled,
     scheduled,
-    total: active.length,
+    total,
     percentage,
   };
 }
@@ -274,17 +323,22 @@ export function computeRecoveryOutlook(
   const passPct = getPassPercentage(subject);
   if (stats.percentage >= passPct) return null;
 
-  const attended = stats.present + stats.excused;
-  const completed = stats.present + stats.absent + stats.excused;
-  const remaining = stats.scheduled;
+  const attended = weightedSessionCount(subject.sessions, subject, ["present", "excused"]);
+  const completed = weightedSessionCount(subject.sessions, subject, [
+    "present",
+    "absent",
+    "excused",
+  ]);
+  const remaining = weightedSessionCount(subject.sessions, subject, ["scheduled"]);
 
   if (remaining === 0) {
+    const unit = getAttendanceCountLabel(subject);
     return {
       canRecover: false,
       maxPossiblePercentage: stats.percentage,
       remainingScheduled: 0,
       minAttendanceNeeded: 0,
-      message: `Cannot reach ${passPct}% — no classes left to recover`,
+      message: `Cannot reach ${passPct}% — no ${unit} left to recover`,
     };
   }
 
@@ -302,14 +356,16 @@ export function computeRecoveryOutlook(
   );
 
   let message: string;
+  const unit = getAttendanceCountLabel(subject);
+  const unitSingular = unit === "sessions" ? "session" : "class";
   if (canRecover) {
     if (minAttendanceNeeded >= remaining) {
-      message = `Can reach ${passPct}% — attend all ${remaining} remaining class${remaining === 1 ? "" : "es"}`;
+      message = `Can reach ${passPct}% — attend all ${remaining} remaining ${remaining === 1 ? unitSingular : unit}`;
     } else {
-      message = `Can reach ${passPct}% — attend at least ${minAttendanceNeeded} of ${remaining} remaining`;
+      message = `Can reach ${passPct}% — attend at least ${minAttendanceNeeded} ${minAttendanceNeeded === 1 ? unitSingular : unit} of ${remaining} remaining`;
     }
   } else {
-    message = `Cannot reach ${passPct}% — best possible is ${maxPossiblePercentage}% (${remaining} left)`;
+    message = `Cannot reach ${passPct}% — best possible is ${maxPossiblePercentage}% (${remaining} ${remaining === 1 ? unitSingular : unit} left)`;
   }
 
   return {
@@ -331,9 +387,10 @@ export function computeLast7DaysPct(subjects: LedgerSubject[]): number {
       if (session.status === "cancelled" || session.status === "scheduled") continue;
       if (!isWithinLastDays(session.date, 7)) continue;
 
-      if (session.status === "present") present++;
-      else if (session.status === "absent") absent++;
-      else if (session.status === "excused") excused++;
+      const weight = getSessionWeight(session, subject);
+      if (session.status === "present") present += weight;
+      else if (session.status === "absent") absent += weight;
+      else if (session.status === "excused") excused += weight;
     }
   }
 
@@ -343,31 +400,31 @@ export function computeLast7DaysPct(subjects: LedgerSubject[]): number {
 }
 
 export function computeOverallStats(subjects: LedgerSubject[]) {
-  let present = 0;
-  let absent = 0;
-  let excused = 0;
+  let presentWeighted = 0;
+  let absentWeighted = 0;
+  let excusedWeighted = 0;
 
   for (const subject of subjects) {
-    const stats = computeSubjectStats(subject);
-    present += stats.present;
-    absent += stats.absent;
-    excused += stats.excused;
+    presentWeighted += weightedSessionCount(subject.sessions, subject, ["present"]);
+    absentWeighted += weightedSessionCount(subject.sessions, subject, ["absent"]);
+    excusedWeighted += weightedSessionCount(subject.sessions, subject, ["excused"]);
   }
 
-  const completed = present + absent + excused;
-  const attended = present + excused;
+  const completedWeighted = presentWeighted + absentWeighted + excusedWeighted;
+  const attendedWeighted = presentWeighted + excusedWeighted;
   const overallAverage =
-    completed > 0 ? Math.round((attended / completed) * 100) : 0;
+    completedWeighted > 0 ? Math.round((attendedWeighted / completedWeighted) * 100) : 0;
 
-  const totalSessions = subjects.reduce(
-    (sum, subject) => sum + subject.sessions.filter((s) => s.status !== "cancelled").length,
-    0
-  );
+  const totalSessions = subjects.reduce((sum, subject) => {
+    return sum + subject.sessions
+      .filter((s) => s.status !== "cancelled")
+      .reduce((slotSum, session) => slotSum + getSessionWeight(session, subject), 0);
+  }, 0);
 
   return {
-    present,
-    absent,
-    excused,
+    present: presentWeighted,
+    absent: absentWeighted,
+    excused: excusedWeighted,
     totalSessions,
     overallAverage,
     last7DaysPct: computeLast7DaysPct(subjects),
@@ -533,12 +590,46 @@ export function seedTodaySessions(subjects: LedgerSubject[]): LedgerSubject[] {
   return subjects.map(appendTodayScheduledSessions);
 }
 
+function normalizeScheduleSlot(slot: ScheduleSlot): ScheduleSlot {
+  return {
+    ...slot,
+    sessionCount: getSlotSessionCount(slot),
+  };
+}
+
+function migrateLegacySubject(subject: LedgerSubject): LedgerSubject {
+  const legacy = subject as LedgerSubject & {
+    attendanceCountMode?: "per_class" | "per_hour";
+    hoursPerSession?: number;
+  };
+
+  let schedules = subject.schedules.map(normalizeScheduleSlot);
+
+  if (legacy.attendanceCountMode === "per_hour" && legacy.hoursPerSession) {
+    const legacyCount = Math.max(1, Math.min(12, legacy.hoursPerSession));
+    schedules = schedules.map((slot) => ({
+      ...slot,
+      sessionCount: slot.sessionCount ?? legacyCount,
+    }));
+  }
+
+  const { attendanceCountMode: _mode, hoursPerSession: _hours, ...rest } = legacy;
+  return { ...rest, schedules };
+}
+
 export function ensureSubjectSessions(subject: LedgerSubject): LedgerSubject {
+  const migrated = migrateLegacySubject(subject);
+  const normalizedSchedules = migrated.schedules.map(normalizeScheduleSlot);
   const { from, until } = resolveRecurringDates(
-    subject.recurringFrom,
-    subject.recurringUntil
+    migrated.recurringFrom,
+    migrated.recurringUntil
   );
-  const normalized = { ...subject, recurringFrom: from, recurringUntil: until };
+  const normalized = {
+    ...migrated,
+    schedules: normalizedSchedules,
+    recurringFrom: from,
+    recurringUntil: until,
+  };
 
   const generated =
     normalized.recurringWeekly && normalized.schedules.length > 0
@@ -678,7 +769,12 @@ export function legacySubjectsToLedger(
 }
 
 export function createDefaultSlot(): ScheduleSlot {
-  return { id: uid(), dayOfWeek: "Monday", time: "09:00" };
+  return {
+    id: uid(),
+    dayOfWeek: "Monday",
+    time: "09:00",
+    sessionCount: DEFAULT_SLOT_SESSION_COUNT,
+  };
 }
 
 export function buildSubjectFromForm(
@@ -702,7 +798,7 @@ export function buildSubjectFromForm(
     recurringWeekly: draft.recurringWeekly,
     recurringFrom: draft.recurringFrom,
     recurringUntil: draft.recurringUntil,
-    schedules: draft.schedules,
+    schedules: draft.schedules.map(normalizeScheduleSlot),
     sessions: draft.sessions,
     passPercentage: draft.passPercentage ?? DEFAULT_PASS_PERCENTAGE,
   });

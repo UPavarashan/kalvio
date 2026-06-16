@@ -6,4 +6,4 @@ export const selectClass = "app-select w-full";
 
 export const selectClassCompact = "app-select w-full py-1 max-w-[120px]";
 
-export const selectClassTime = "app-select flex-1 min-w-0 py-1";
+export const selectClassTime = "app-select flex-1 min-w-0 py-2 text-xs";

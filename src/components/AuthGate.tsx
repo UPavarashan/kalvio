@@ -1,6 +1,9 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "../context/AuthContext";
 import Login from "../pages/Login";
+import WhatsNewModal from "./WhatsNewModal";
+import { hasSeenCurrentChangelog } from "../config/changelog";
 
 interface AuthGateProps {
   children: ReactNode;
@@ -8,6 +11,7 @@ interface AuthGateProps {
 
 export default function AuthGate({ children }: AuthGateProps) {
   const { user, isReady } = useAuth();
+  const [showWhatsNew, setShowWhatsNew] = useState(() => !hasSeenCurrentChangelog());
 
   if (!isReady) {
     return (
@@ -18,5 +22,11 @@ export default function AuthGate({ children }: AuthGateProps) {
   }
 
   if (!user) return <Login />;
-  return children;
+
+  return (
+    <>
+      {children}
+      {showWhatsNew && <WhatsNewModal onClose={() => setShowWhatsNew(false)} />}
+    </>
+  );
 }

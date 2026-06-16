@@ -9,7 +9,7 @@ import type {
   LedgerSubject,
   ScheduleSlot,
 } from "../types/ledger";
-import { formatScheduleSummary, formatTimeShort, groupSchedulesByTime } from "../types/ledger";
+import { formatScheduleSummary, formatTimeShort, dayLabel } from "../types/ledger";
 import {
   LedgerLogModal,
   SubjectFormModal,
@@ -27,6 +27,7 @@ import {
   formatSessionDateTime,
   getPassPercentage,
   getPendingSessions,
+  getSlotSessionCount,
   isSessionToday,
   legacySubjectsToLedger,
 } from "../utils/ledger";
@@ -57,20 +58,18 @@ export default function Ledger() {
   const [activeTerm, setActiveTerm] = useState<1 | 2>(CURRENT_TERM);
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [term2ByYear, setTerm2ByYear] = useState<Record<string, Term2State>>(() => ({
     [CURRENT_YEAR]: emptyTerm2State(),
   }));
 
-  const loadedForUser = useRef<string | null>(null);
-
   useEffect(() => {
     if (!user) {
-      loadedForUser.current = null;
       setHydrated(false);
+      setLoadError(null);
       return;
     }
-    if (loadedForUser.current === user.id) return;
-    loadedForUser.current = user.id;
 
     let cancelled = false;
 
@@ -98,16 +97,20 @@ export default function Ledger() {
             : store.years[0] ?? CURRENT_YEAR
         );
         setActiveTerm(store.selectedTerm === 1 ? 1 : 2);
+        setLoadError(null);
         setHydrated(true);
       })
       .catch(() => {
-        if (!cancelled) setHydrated(true);
+        if (!cancelled) {
+          setLoadError("Could not load attendance. Check your connection and try again.");
+          setHydrated(true);
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, reloadKey]);
 
   useEffect(() => {
     if (!user || !hydrated) return;
@@ -382,6 +385,25 @@ export default function Ledger() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col gap-4 pb-8 sm:pb-16 w-full">
+        <p className="font-body text-error">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setHydrated(false);
+            setLoadError(null);
+            setReloadKey((key) => key + 1);
+          }}
+          className="px-4 py-2 bg-primary text-on-primary hand-drawn-border font-label text-xs charcoal-shadow"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5 sm:gap-8 pb-8 sm:pb-16 w-full">
       <Header
@@ -502,7 +524,7 @@ export default function Ledger() {
           icon="check_circle"
           label="TOTAL SESSIONS"
           value={String(stats.totalSessions)}
-          hint="All classes"
+          hint="Includes sessions per class"
         />
         <StatCard
           icon="schedule"
@@ -644,15 +666,15 @@ export default function Ledger() {
       </section>
 
       {displayedData.calendarDays.length > 0 && (
-        <section className="paper-texture hand-drawn-border charcoal-shadow p-6 bg-surface-container w-full">
-          <h3 className="font-headline text-xl font-medium text-primary mb-6">
+        <section className="paper-texture hand-drawn-border charcoal-shadow p-4 sm:p-6 bg-surface-container w-full min-w-0">
+          <h3 className="font-headline text-lg sm:text-xl font-medium text-primary mb-4 sm:mb-6">
             {displayedData.calendarMonth}
           </h3>
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-0">
             {displayedData.calendarDays.map((day) => (
               <div
                 key={day.day}
-                className={`aspect-square flex items-center justify-center font-label text-xs rounded-full ${
+                className={`aspect-square max-w-full flex items-center justify-center font-label text-[10px] sm:text-xs rounded-full ${
                   day.status === "present"
                     ? "bg-primary-fixed text-primary"
                     : day.status === "absent"
@@ -872,7 +894,6 @@ function SubjectScheduleCompact({
 }) {
   if (schedules.length === 0) return null;
 
-  const groups = groupSchedulesByTime(schedules);
   const tooltip =
     formatScheduleSummary(schedules) + (recurringWeekly ? " · Weekly" : "");
 
@@ -881,13 +902,20 @@ function SubjectScheduleCompact({
       className="font-label text-[9px] leading-none text-on-surface-variant/80 mt-1 truncate"
       title={tooltip}
     >
-      {groups.map(({ time, days }, i) => (
-        <span key={time}>
-          {i > 0 && " · "}
-          <span className="tracking-tight">{days.join("·")}</span>{" "}
-          <span className="tabular-nums">{formatTimeShort(time)}</span>
-        </span>
-      ))}
+      {schedules.map((slot, i) => {
+        const counted = getSlotSessionCount(slot);
+        const dayShort = dayLabel(slot.dayOfWeek);
+        return (
+          <span key={slot.id}>
+            {i > 0 && " · "}
+            <span className="tracking-tight">{dayShort}</span>{" "}
+            <span className="tabular-nums">{formatTimeShort(slot.time)}</span>
+            {counted !== 1 && (
+              <span className="text-on-surface-variant/70"> ×{counted}</span>
+            )}
+          </span>
+        );
+      })}
       {recurringWeekly && <span className="text-on-surface-variant/55"> · wk</span>}
     </p>
   );
@@ -1042,7 +1070,7 @@ function LedgerControls({
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center justify-center gap-1.5 min-w-[2.75rem] min-h-[2.75rem] sm:min-w-0 sm:min-h-0 px-2.5 sm:px-4 py-2 border border-primary text-primary hand-drawn-border font-label text-xs hover:bg-primary-fixed transition-colors shrink-0 whitespace-nowrap"
+        className="flex items-center justify-center gap-1.5 min-w-[2.75rem] min-h-[2.75rem] sm:min-w-0 sm:min-h-0 max-w-[11rem] sm:max-w-none px-2.5 sm:px-4 py-2 border border-primary text-primary hand-drawn-border font-label text-xs hover:bg-primary-fixed transition-colors shrink-0"
       >
         <span className="truncate">{summary}</span>
         <span className="material-symbols-outlined text-sm shrink-0">
@@ -1051,7 +1079,16 @@ function LedgerControls({
       </button>
 
       {expanded && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-[min(20rem,calc(100vw-1.5rem))] paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-3">
+        <>
+          <button
+            type="button"
+            aria-label="Close year and term settings"
+            className="fixed inset-0 z-40 bg-inverse-surface/20 sm:hidden"
+            onClick={onToggle}
+          />
+          <div
+            className="fixed z-50 left-3 right-3 bottom-[max(1rem,env(safe-area-inset-bottom))] sm:absolute sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mt-2 sm:w-[min(20rem,calc(100vw-1.5rem))] paper-texture hand-drawn-border charcoal-shadow-lg bg-surface-container p-3 max-h-[70dvh] overflow-y-auto"
+          >
           <p className="font-label text-[10px] text-on-surface-variant mb-3">Set Year</p>
           <div className="flex flex-col gap-3">
             <div>
@@ -1141,6 +1178,7 @@ function LedgerControls({
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );

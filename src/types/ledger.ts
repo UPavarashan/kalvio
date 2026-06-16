@@ -2,6 +2,8 @@ export interface ScheduleSlot {
   id: string;
   dayOfWeek: string;
   time: string;
+  /** How many sessions this class time counts as (e.g. 4 for a 4-hour block at some universities) */
+  sessionCount?: number;
 }
 
 export interface ClassSession {
@@ -23,6 +25,8 @@ export interface LedgerSubject {
   sessions: ClassSession[];
   passPercentage?: number;
 }
+
+export const DEFAULT_SLOT_SESSION_COUNT = 1;
 
 export const DEFAULT_PASS_PERCENTAGE = 80;
 
