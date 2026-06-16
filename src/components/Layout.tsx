@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import TopNav from "./TopNav";
+import FeedbackFooter from "./FeedbackFooter";
 
 export default function Layout() {
   return (
@@ -7,6 +8,7 @@ export default function Layout() {
       <TopNav />
       <main className="px-3 py-4 sm:px-4 md:p-6 max-w-7xl w-full mx-auto min-w-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <Outlet />
+        <FeedbackFooter />
       </main>
     </div>
   );

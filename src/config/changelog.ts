@@ -7,11 +7,12 @@ export interface ChangelogEntry {
 
 /** Bump version when shipping user-visible updates */
 export const CURRENT_CHANGELOG: ChangelogEntry = {
-  version: "0.3.0",
+  version: "0.3.1",
   date: "June 2026",
   title: "What's new in Kalvio",
   items: [
-    "Set number of sessions per class time — e.g. a 4-hour block can count as 4 or 1.",
+    "Send feedback from any page — bugs, ideas, or general notes go straight to Pavarashan.",
+    "Set sessions per class time when adding a subject (e.g. a 4-hour block counts as 4 or 1).",
     "Subject icons now match the course you signed up with.",
     "Cleaner mobile layout on Attendance, calendar, and modals.",
     "Styled confirmation when deleting an academic year.",
