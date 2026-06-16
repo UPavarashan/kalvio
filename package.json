@@ -10,6 +10,7 @@
     "test:supabase": "node --env-file=.env.local testSupabase.js",
     "setup:db": "node --env-file=.env.local scripts/runSetup.mjs",
     "migrate:db": "node --env-file=.env.local scripts/runMigration.mjs",
+    "migrate:feedback": "node --env-file=.env.local scripts/runFeedbackMigration.mjs",
     "clear:users": "node --env-file=.env.local scripts/clearUsers.mjs",
     "test:auth": "node --env-file=.env.local scripts/testAuth.mjs"
   },
